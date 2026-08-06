@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable max-lines -- 预存的大型伸缩服务文件（>500 行）；拆分需重构策略/执行器，列为独立技术债任务 */
 import { randomUUID } from 'crypto';
 import { logger } from '../../../utils/logger';
 import { autoScaleRepository } from '../../../repositories';

@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../../../../utils/logger';
 import type { Provider, ProviderResult } from './types';
@@ -179,18 +179,53 @@ export const scriptProvider: Provider = {
 };
 
 // 脚本方法实现
+// ⚠️ 安全说明（2026-08-06 P1）：
+//   原实现用 promisify(exec)(command) —— exec 会经 shell 解析命令字符串，
+//   若 command 含 `;`、`|`、`$()` 等 shell 元字符则构成命令注入。
+//   现改为 execFile(command, args) 数组传参，不经 shell，杜绝元字符注入。
+//   另增加命令白名单，仅允许只读诊断类命令，禁止任意可执行文件。
+const SCRIPT_ALLOWED_COMMANDS = new Set([
+  'ls', 'cat', 'head', 'tail', 'grep', 'find', 'du', 'df',
+  'ps', 'top', 'free', 'uptime', 'who', 'date', 'echo',
+  'ping', 'traceroute', 'nslookup', 'dig', 'ip', 'ifconfig',
+  'systemctl', 'journalctl', 'dmesg',
+]);
+
 export const scriptMethods = {
   async exec(params: Record<string, unknown>): Promise<ProviderResult> {
-    const execPromise = promisify(exec);
+    const execFilePromise = promisify(execFile);
+    const command = params.command as string;
+    const args = (params.args as string[]) || [];
+
+    if (!command) {
+      return { success: false, error: '缺少 command 参数' };
+    }
+
+    // 命令白名单校验：阻止任意可执行文件调用
+    const baseCmd = command.split('/').pop() || command;
+    if (!SCRIPT_ALLOWED_COMMANDS.has(baseCmd)) {
+      logger.warn(`[ScriptProvider] 命令被白名单拒绝: ${command}`);
+      return {
+        success: false,
+        error: `命令不在允许列表内: ${baseCmd}。仅允许: ${Array.from(SCRIPT_ALLOWED_COMMANDS).join(', ')}`,
+      };
+    }
+
+    // 参数安全校验：拒绝 shell 元字符（execFile 虽不经 shell，但仍防御性过滤）
+    const DANGEROUS_ARG = /[;|`$()<>{}\n\r]/;
+    for (const a of args) {
+      if (typeof a === 'string' && DANGEROUS_ARG.test(a)) {
+        logger.warn(`[ScriptProvider] 参数含危险字符被拒绝: ${a}`);
+        return { success: false, error: '参数包含禁止的 shell 元字符' };
+      }
+    }
 
     try {
-      const { stdout, stderr } = await execPromise(
-        params.command as string,
-        {
-          cwd: params.cwd as string | undefined,
-          timeout: params.timeout as number | undefined
-        }
-      );
+      const { stdout, stderr } = await execFilePromise(command, args, {
+        cwd: params.cwd as string | undefined,
+        timeout: params.timeout as number | undefined,
+        maxBuffer: 1024 * 1024, // 1MB 上限，防 DoS
+      });
 
       return {
         success: true,

@@ -1,8 +1,15 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Table, Tabs, Row, Col, Tag, Button, Spin, Empty, Statistic, message } from 'antd';
+
+import { Card, Table, Tabs, Row, Col, Tag, Button, Spin, Empty, Statistic } from 'antd';
+
 import { ReloadOutlined } from '@ant-design/icons';
+
 import { AlertCircle, Zap, DollarSign, TrendingDown, TrendingUp, Package, Cpu } from 'lucide-react';
+
 import api from '../../../lib/api';
+
 import { getAxiosErrorMessage } from '../../../lib/errorHandler';
 
 // ==================== 类型定义 ====================

@@ -1,12 +1,16 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import React, { useEffect, useState } from 'react';
+
 import { logger } from '@/lib/logger';
-import {
-  Card, Table, Tag, Button, Space, Typography, Modal, Form, Input, Select, InputNumber, Switch, message, Popconfirm, Descriptions as _Descriptions, Spin as _Spin,
-} from 'antd';
+
+import { Card, Table, Tag, Button, Space, Typography, Modal, Form, Input, Select, InputNumber, Switch, Popconfirm, Descriptions as _Descriptions, Spin as _Spin, } from 'antd';
+
 import {
   PlusOutlined, CloudServerOutlined, PlayCircleOutlined, PauseCircleOutlined,
   ReloadOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, SyncOutlined,
 } from '@ant-design/icons';
+
 import {
   fetchExternalStatus, registerExternalServer, startExternalServer,
   startAllExternalServers, stopExternalServer, unregisterExternalServer,

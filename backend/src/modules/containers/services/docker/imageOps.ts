@@ -11,9 +11,20 @@ type DS = InstanceType<typeof DockerServiceClass>;
 
 export async function impl_listImages(service: DS): Promise<DockerImage[]> {
   if (!service.initialized) throw new Error('Docker service not available');
-  
+
   const images = await service.docker.listImages();
-  return images.map(img => ({
+  return images.map(normalizeImage);
+}
+
+/**
+ * 将 dockerode 原始镜像信息（PascalCase）归一化为 DockerImage。
+ * listImages 返回顶级 Labels；inspect 返回 Config.Labels —— 统一兼容。
+ * 本地 service 与多主机路由共用此映射，保证字段大小写一致。
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function normalizeImage(img: any): DockerImage {
+  const labels = img.Labels ?? img.Config?.Labels ?? undefined;
+  return {
     id: img.Id,
     tags: img.RepoTags || [],
     repository: img.RepoTags?.[0]?.split(':')[0] || '<none>',
@@ -21,8 +32,8 @@ export async function impl_listImages(service: DS): Promise<DockerImage[]> {
     size: img.Size,
     created: img.Created,
     virtualSize: img.VirtualSize,
-    labels: img.Labels,
-  }));
+    labels,
+  };
 }
 
 export async function impl_pullImage(service: DS, imageName: string, onProgress?: DockerPullProgress): Promise<void> {
@@ -59,18 +70,8 @@ export async function impl_removeImage(service: DS, id: string, force = false, n
 
 export async function impl_getImageInfo(service: DS, id: string): Promise<DockerImage> {
   if (!service.initialized) throw new Error('Docker service not available');
-  
+
   const image = service.docker.getImage(id);
   const info = await image.inspect();
-  
-  return {
-    id: info.Id,
-    tags: info.RepoTags || [],
-    size: info.Size,
-    virtualSize: info.VirtualSize,
-    created: info.Created,
-    repository: info.RepoTags?.[0]?.split(':')[0] || '<none>',
-    tag: info.RepoTags?.[0]?.split(':')[1] || '<none>',
-    labels: info.Config?.Labels as Record<string, string> | undefined,
-  };
+  return normalizeImage(info);
 }

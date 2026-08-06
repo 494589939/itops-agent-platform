@@ -43,7 +43,7 @@ function createNodeFieldUpdater(
         ),
       );
       setSelectedNode((prev) =>
-        prev && prev.id === nodeId
+        prev?.id === nodeId
           ? { ...prev, data: { ...prev.data, [field]: value } }
           : prev,
       );
@@ -66,7 +66,7 @@ export function useNodeConfigUpdaters({
         nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n)),
       );
       setSelectedNode((prev) =>
-        prev && prev.id === nodeId
+        prev?.id === nodeId
           ? { ...prev, data: { ...prev.data, ...data } }
           : prev,
       );
@@ -121,7 +121,7 @@ export function useNodeConfigUpdaters({
         }),
       );
       setSelectedNode((prev) => {
-        if (!prev || prev.id !== nodeId) return prev;
+        if (prev?.id !== nodeId) return prev;
         const existing = (prev.data as ApprovalNodeData)?.approvalConfig || {};
         return { ...prev, data: { ...prev.data, approvalConfig: { ...existing, ...partial } } };
       });
@@ -136,7 +136,7 @@ export function useNodeConfigUpdaters({
         nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...partial } } : n)),
       );
       setSelectedNode((prev) =>
-        prev && prev.id === nodeId
+        prev?.id === nodeId
           ? { ...prev, data: { ...prev.data, ...partial } }
           : prev,
       );
@@ -170,7 +170,7 @@ export function useNodeConfigUpdaters({
         ),
       );
       setSelectedNode((prev) =>
-        prev && prev.id === nodeId
+        prev?.id === nodeId
           ? { ...prev, data: { ...prev.data, ...newData } }
           : prev,
       );
@@ -188,7 +188,7 @@ export function useNodeConfigUpdaters({
         }),
       );
       setSelectedNode((prev) => {
-        if (!prev || prev.id !== nodeId) return prev;
+        if (prev?.id !== nodeId) return prev;
         const existing = (prev.data as ProviderNodeData)?.config || {};
         return { ...prev, data: { ...prev.data, config: { ...existing, [key]: value } } };
       });

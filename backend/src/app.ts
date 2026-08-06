@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
@@ -30,8 +31,11 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// 安全HTTP头：X-Content-Type-Options, X-Frame-Options, HSTS, CSP 等
+// crossOriginResourcePolicy: same-origin 避免 Swagger 静态资源被 cross-origin 拦截
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-origin' } }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 app.use(express.static(path.join(__dirname, '../../frontend/dist')));
 

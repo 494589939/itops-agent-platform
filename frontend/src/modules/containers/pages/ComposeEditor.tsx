@@ -1,6 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable max-lines -- 预存的大型页面组件（>500 行）；拆分需将表单/表格/预览抽为子组件，列为独立技术债任务 */
+
+import { message } from '@/lib/antdMessage';
 import { useState, useEffect, useMemo } from 'react';
-import { Table, Button, Modal, Tag, message, Drawer, Form, Input, Popconfirm, Empty } from 'antd';
+
+import { Table, Button, Modal, Tag, Drawer, Form, Input, Popconfirm, Empty } from 'antd';
+
 import {
   Plus,
   Edit,
@@ -14,7 +19,9 @@ import {
   FileText,
   Boxes,
 } from 'lucide-react';
+
 import api from '../../../lib/api';
+
 import { containersApi } from '../api';
 
 const statusColors: Record<string, string> = {
@@ -187,11 +194,13 @@ export default function ComposeEditor() {
 
   // ── 派生 ──
   const filteredData = useMemo(() => {
+    if (!Array.isArray(data)) return [];
     if (statusFilter === 'all') return data;
     return data.filter((p) => p.status === statusFilter);
   }, [data, statusFilter]);
 
   const stats = useMemo(() => {
+    if (!Array.isArray(data)) return { projects: 0, totalServices: 0, totalRunning: 0, runningProjects: 0, errorProjects: 0 };
     let totalServices = 0;
     let totalRunning = 0;
     let runningProjects = 0;

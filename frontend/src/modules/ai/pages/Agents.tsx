@@ -1,14 +1,27 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { Plus, Search, Upload, Bot, Activity, Zap, BarChart3 } from 'lucide-react';
+
 import clsx from 'clsx';
+
 import { useState } from 'react';
-import { message, Modal } from 'antd';
+
+import { Modal } from 'antd';
+
 import { useQueryClient, useQuery } from '@tanstack/react-query';
+
 import { useAgents } from './agents/useAgents';
+
 import AgentList from './agents/AgentList';
+
 import AgentDetail from './agents/AgentDetail';
+
 import AgentEditor from './agents/AgentEditor';
+
 import AgentTestPanel from './agents/AgentTestPanel';
+
 import api from '@/lib/api';
+
 import type { Agent as _Agent } from './agents/types';
 
 // Re-export types for backward compatibility

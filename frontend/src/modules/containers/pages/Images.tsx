@@ -1,6 +1,11 @@
+
+import { message } from '@/lib/antdMessage';
 import { useState, useEffect, useMemo } from 'react';
-import { Table, Button, Modal, Form, Input, Tag, message, Popconfirm, Empty, Tooltip, Select } from 'antd';
+
+import { Table, Button, Modal, Form, Input, Tag, Popconfirm, Empty, Tooltip, Select } from 'antd';
+
 import { Search, RefreshCw, Trash2, Download, Cloud, HardDrive, Server, Layers } from 'lucide-react';
+
 import api from '../../../lib/api';
 
 export interface Image {
@@ -93,17 +98,20 @@ export default function Images() {
 
   // ── 派生：按 host 过滤 + 总览统计 ──
   const hostOptions = useMemo(() => {
+    if (!Array.isArray(data)) return [];
     const set = new Set<string>();
     data.forEach(d => { if (d.host) set.add(d.host); });
     return Array.from(set).sort();
   }, [data]);
 
   const filteredData = useMemo(() => {
+    if (!Array.isArray(data)) return [];
     if (hostFilter === 'all') return data;
     return data.filter(d => d.host === hostFilter);
   }, [data, hostFilter]);
 
   const stats = useMemo(() => {
+    if (!Array.isArray(data)) return { totalSize: 0, dbCount: 0, mwCount: 0 };
     let totalSize = 0;
     let dbCount = 0;
     let mwCount = 0;

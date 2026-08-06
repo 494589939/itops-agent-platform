@@ -29,7 +29,9 @@ export function useNetworkTab(endpointId: string) {
       const { data } = await api.get('/containers/networks/list', {
         params: withEndpointParams(endpointId),
       });
-      return data || [];
+      // API 可能返回数组或 { success, data: [...] } 包装对象
+      const payload = data?.data ?? data;
+      return Array.isArray(payload) ? payload : [];
     },
   });
 

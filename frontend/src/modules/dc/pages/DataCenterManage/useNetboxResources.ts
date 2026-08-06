@@ -1,6 +1,11 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useState, useEffect, useCallback } from 'react';
-import { Form, message } from 'antd';
+
+import { Form } from 'antd';
+
 import { dcApi } from '../../api';
+
 import type {
   Room,
   Rack,
@@ -10,6 +15,7 @@ import type {
   PowerFeed,
   Cable as UiCable,
 } from './types';
+
 import type {
   ManufacturerInput,
   DeviceTypeInput,

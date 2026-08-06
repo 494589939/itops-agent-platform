@@ -1,11 +1,20 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useState } from 'react';
+
 import { LineChart, Play, Plug, ChevronDown, ChevronUp } from 'lucide-react';
-import { message } from 'antd';
+;
+
 import api from '../../../lib/api';
+
 import { getAxiosErrorMessage } from '../../../lib/errorHandler';
+
 import { logger } from '../../../lib/logger';
+
 import { buildRequestBody, unwrapResponse } from './prometheus/format';
+
 import { ResultsTable } from './prometheus/ResultsTable';
+
 import type { AuthConfig, PromResponse, QueryMode } from './prometheus/types';
 
 export default function PrometheusQuery() {

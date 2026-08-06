@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Zabbix 主动查询页面
  *
  * 提供对 Zabbix API 的主动查询能力：
@@ -8,8 +8,12 @@
  * 响应格式：{ success, data: { result: any[] }, error }。
  */
 
+
+import { message } from '@/lib/antdMessage';
 import { useMemo, useState } from 'react';
+
 import clsx from 'clsx';
+
 import {
   Activity,
   Server,
@@ -23,10 +27,14 @@ import {
   Plug,
   type LucideIcon,
 } from 'lucide-react';
-import { message } from 'antd';
+;
+
 import api from '../../../lib/api';
+
 import { getAxiosErrorMessage } from '../../../lib/errorHandler';
+
 import { ResultsTable } from './zabbix/ResultsTable';
+
 import {
   buildPayload,
   HOST_COLUMNS,
@@ -35,6 +43,7 @@ import {
   PROBLEM_COLUMNS,
   HISTORY_COLUMNS,
 } from './zabbix/types';
+
 import type {
   ConnectionConfig,
   TabKey,

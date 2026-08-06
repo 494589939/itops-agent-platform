@@ -199,8 +199,8 @@ export default function NotificationBell() {
       trigger="click"
       placement="bottomLeft"
       arrow={false}
-      overlayInnerStyle={{ padding: 0 }}
-      destroyTooltipOnHide
+      styles={{ body: { padding: 0 } }}
+      destroyOnHidden
     >
       <button
         className={clsx(

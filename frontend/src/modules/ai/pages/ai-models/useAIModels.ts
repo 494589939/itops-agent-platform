@@ -1,9 +1,16 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useState } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { message } from 'antd';
+;
+
 import aiApi from '../../api';
+
 import { getAxiosErrorMessage } from '../../../../lib/errorHandler';
+
 import { useToast } from '../../../../contexts/ToastContext';
+
 import type { AIModel, AIModelFormData, UpdateModelPayload } from './types';
 
 const EMPTY_FORM: AIModelFormData = {

@@ -1,7 +1,12 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { Play, Server, Database, Sparkles } from 'lucide-react';
-import { message } from 'antd';
+;
+
 import MarkdownOutput from '../../../../shared/components/MarkdownOutput';
+
 import api from '@/lib/api';
+
 import type { Agent, Server as ServerType, DbConnection } from './types';
 
 interface AgentTestPanelProps {

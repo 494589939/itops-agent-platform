@@ -1,6 +1,11 @@
+
+import { message } from '@/lib/antdMessage';
 import { useState, useEffect, useMemo } from 'react';
-import { Table, Button, Modal, Form, Input, Select, Tag, message, Popconfirm, Progress, Empty } from 'antd';
+
+import { Table, Button, Modal, Form, Input, Select, Tag, Popconfirm, Progress, Empty } from 'antd';
+
 import { Plus, Edit, Trash2, Search, RefreshCw, HardDrive, Database } from 'lucide-react';
+
 import api from '../../../lib/api';
 
 interface Volume {
@@ -52,8 +57,10 @@ export default function Volumes() {
     setLoading(true);
     try {
       const { data } = await api.get('/volumes', { params: { page, pageSize, search } });
-      setData(data?.rows || []);
-      setTotal(data?.total || 0);
+      // 拦截器已解包：data 可能是数组或 { rows/items, total } 对象
+      const list = Array.isArray(data) ? data : (data?.rows ?? data?.items ?? []);
+      setData(list);
+      setTotal(data?.total || list.length || 0);
     } catch { message.error('加载失败'); }
     finally { setLoading(false); }
   };
@@ -98,11 +105,13 @@ export default function Volumes() {
 
   // ── 派生：过滤 + 统计 ──
   const filteredData = useMemo(() => {
+    if (!Array.isArray(data)) return [];
     if (typeFilter === 'all') return data;
     return data.filter(v => v.type === typeFilter);
   }, [data, typeFilter]);
 
   const stats = useMemo(() => {
+    if (!Array.isArray(data)) return { total: 0, totalSize: 0, inUse: 0, highUsage: 0 };
     let totalSize = 0;
     let inUse = 0;
     let highUsage = 0;

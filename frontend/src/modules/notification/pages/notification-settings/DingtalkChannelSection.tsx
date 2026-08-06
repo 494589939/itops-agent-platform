@@ -48,7 +48,7 @@ export function DingtalkChannelSection({
           <div className="relative">
             <input
               type={showUrl ? 'text' : 'password'}
-              value={config.dingtalk_config.webhook_url}
+              value={config.dingtalk_config?.webhook_url ?? ''}
               onChange={(e) =>
                 onChange({
                   dingtalk_config: { webhook_url: e.target.value },

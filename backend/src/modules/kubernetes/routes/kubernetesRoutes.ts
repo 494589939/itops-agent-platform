@@ -40,7 +40,7 @@ router.post(
     try {
       const { config } = req.body;
       if (!config)
-        return res.status(400).json({ success: false, message: '请提供 kubeconfig 内容' });
+        {return res.status(400).json({ success: false, message: '请提供 kubeconfig 内容' });}
       const result = await kubernetesService.testContext(config);
       res.json({ success: true, data: result });
     } catch (err: unknown) {
@@ -74,9 +74,9 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       if (!kubernetesService.isAvailable())
-        return res
+        {return res
           .status(503)
-          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });
+          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });}
       const data = await kubernetesService.listNamespaces(req.query.context as string | undefined);
       res.json({ success: true, data });
     } catch (err: unknown) {
@@ -92,9 +92,9 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       if (!kubernetesService.isAvailable())
-        return res
+        {return res
           .status(503)
-          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });
+          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });}
       const ns = (req.query.namespace as string) || 'default';
       const data = await kubernetesService.listPods(ns, req.query.context as string | undefined);
       res.json({ success: true, data });
@@ -111,9 +111,9 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       if (!kubernetesService.isAvailable())
-        return res
+        {return res
           .status(503)
-          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });
+          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });}
       const ns = (req.query.namespace as string) || 'default';
       const data = await kubernetesService.listDeployments(
         ns,
@@ -133,9 +133,9 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       if (!kubernetesService.isAvailable())
-        return res
+        {return res
           .status(503)
-          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });
+          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });}
       const ns = (req.query.namespace as string) || 'default';
       const data = await kubernetesService.listServices(
         ns,
@@ -155,9 +155,9 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       if (!kubernetesService.isAvailable())
-        return res
+        {return res
           .status(503)
-          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });
+          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });}
       const data = await kubernetesService.listNodes(req.query.context as string | undefined);
       res.json({ success: true, data });
     } catch (err: unknown) {
@@ -173,9 +173,9 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       if (!kubernetesService.isAvailable())
-        return res
+        {return res
           .status(503)
-          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });
+          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });}
       const data = await kubernetesService.getPod(
         req.params.namespace,
         req.params.name,
@@ -195,9 +195,9 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       if (!kubernetesService.isAvailable())
-        return res
+        {return res
           .status(503)
-          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });
+          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });}
       const tail = parseInt(req.query.tail as string) || 100;
       const data = await kubernetesService.getPodLogs(
         req.params.namespace,
@@ -219,9 +219,9 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       if (!kubernetesService.isAvailable())
-        return res
+        {return res
           .status(503)
-          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });
+          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });}
       await kubernetesService.deletePod(
         req.params.namespace,
         req.params.name,
@@ -241,12 +241,12 @@ router.put(
   async (req: Request, res: Response) => {
     try {
       if (!kubernetesService.isAvailable())
-        return res
+        {return res
           .status(503)
-          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });
+          .json({ success: false, message: 'K8s 不可用，请先导入 kubeconfig 配置' });}
       const { replicas } = req.body;
       if (replicas === null || replicas === undefined)
-        return res.status(400).json({ success: false, message: '需要副本数' });
+        {return res.status(400).json({ success: false, message: '需要副本数' });}
       await kubernetesService.scaleDeployment(
         req.params.namespace,
         req.params.name,

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- 预存的大型监控仪表盘页面（>500 行）；拆分需将各统计卡片抽为子组件，列为独立技术债任务 */
 import { useQuery } from '@tanstack/react-query';
 import {
   Bot,

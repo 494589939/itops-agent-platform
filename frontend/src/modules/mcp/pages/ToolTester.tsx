@@ -1,8 +1,15 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import React, { useState } from 'react';
-import { Card, Input, Button, Typography, Select, Space, Tag, message, Table as _Table, Tabs as _Tabs } from 'antd';
+
+import { Card, Input, Button, Typography, Select, Space, Tag, Table as _Table, Tabs as _Tabs } from 'antd';
+
 import { SendOutlined, HistoryOutlined, CodeOutlined as _CodeOutlined } from '@ant-design/icons';
+
 import { callTool, fetchManifest } from '../api';
+
 import type { McpTool, ToolCallResult } from '../api';
+
 import { getAxiosErrorMessage } from '@/lib/errorHandler';
 
 const { Title, Text, Paragraph } = Typography;

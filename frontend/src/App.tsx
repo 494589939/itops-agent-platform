@@ -1,13 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { lazy, Suspense, isValidElement } from 'react';
-import { ConfigProvider, theme as antdTheme } from 'antd';
+import { ConfigProvider, theme as antdTheme, App as AntdApp } from 'antd';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import ErrorBoundary from './shared/components/ErrorBoundary';
 import ProtectedRoute from './shared/components/ProtectedRoute';
 import Layout from './shared/layouts/Layout';
+import { bindMessageInstance } from './lib/antdMessage';
 
 // 模块路由聚合
 import { protectedRoutes, publicRoutes } from './modules/_routes.tsx';
@@ -42,9 +43,20 @@ function ThemedConfigProvider({ children }: { children: React.ReactNode }) {
         },
       }}
     >
-      {children}
+      <AntdApp>
+        {/* 绑定动态 message 实例到全局代理，消除静态方法 context 警告 */}
+        <AppMessageBinder />
+        {children}
+      </AntdApp>
     </ConfigProvider>
   );
+}
+
+/** 用 App.useApp() 获取动态 message 实例并绑定到全局代理 */
+function AppMessageBinder() {
+  const { message } = AntdApp.useApp();
+  bindMessageInstance(message);
+  return null;
 }
 
 const queryClient = new QueryClient({

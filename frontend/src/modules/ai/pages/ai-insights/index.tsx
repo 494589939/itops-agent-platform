@@ -64,7 +64,8 @@ export default function AIInsights() {
     : 0;
   const { text: mttrTrend, positive: mttrPositive } = (() => {
     // 修复耗时减少（completedThisWeek > completedLastWeek 表示更多完成）= 正面
-    if (remediationStats && remediationStats.mttrSeconds != null && remediationStats.mttrCount > 0) {
+    // eslint-disable-next-line eqeqeq -- != null 是「非 null 且非 undefined」惯用检查，改为 !== 会漏判 undefined
+    if (remediationStats?.mttrSeconds != null && remediationStats.mttrCount > 0) {
       // 用本周/上周的差值：本周完成更多 → 趋势向上
       return { text: `本周 ${remediationStats.completedThisWeek} 次完成`, positive: true };
     }

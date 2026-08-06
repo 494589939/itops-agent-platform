@@ -1,7 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { message } from '@/lib/antdMessage';
 import { useState, useEffect } from 'react';
-import { Card, Button, Modal, Tag, Space as _Space, message, Form, Input, Select, Popconfirm, Row, Col, Table, Typography, Empty } from 'antd';
+
+import { Card, Button, Modal, Tag, Space as _Space, Form, Input, Select, Popconfirm, Row, Col, Table, Typography, Empty } from 'antd';
+
 import { Plus, Trash2, RefreshCw, Wifi, Package, ExternalLink } from 'lucide-react';
+
 import api from '../../../lib/api';
 
 const registryTypeLabels: Record<string, { label: string; color: string }> = {

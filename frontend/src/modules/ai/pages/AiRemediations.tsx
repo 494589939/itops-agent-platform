@@ -1,9 +1,17 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useState } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Modal, Input, message } from 'antd';
+
+import { Modal, Input } from 'antd';
+
 import type { LucideIcon } from 'lucide-react';
+
 import { Bot, AlertTriangle, Shield, Clock, CheckCircle, XCircle, Loader2, Terminal, ChevronDown, ChevronRight, ThumbsUp, ThumbsDown } from 'lucide-react';
+
 import aiApi from '../api';
+
 import { getAxiosErrorMessage } from '../../../lib/errorHandler';
 
 interface AiRemediation {

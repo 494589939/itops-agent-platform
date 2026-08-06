@@ -1,18 +1,27 @@
-/**
+﻿/**
  * 脚本管理页面
  *
  * 从原 infra/pages/Scripts.tsx 抽离（2026-07-08 增量-12 P1-6 frontend 同步）。
  * 改为通过 scriptsApi 调用。
  */
 
+
+import { message } from '@/lib/antdMessage';
 import { useState } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { message } from 'antd';
+;
+
 import { FileCode, Plus, Edit, Trash2, Play, Search, Tag, Code } from 'lucide-react';
+
 import { formatDistanceToNow } from 'date-fns';
+
 import clsx from 'clsx';
+
 import api from '@/lib/api';
+
 import { getAxiosErrorMessage } from '@/lib/errorHandler';
+
 import { scriptsApi, type Script } from '../api';
 
 export default function Scripts() {

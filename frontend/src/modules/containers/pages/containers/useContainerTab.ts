@@ -48,7 +48,10 @@ export function useContainerTab(endpointId: string) {
           endpointId: endpointId !== 'local' ? endpointId : undefined,
         },
       });
-      return { data: (data?.data || data || []) as ContainerItem[], total: (data?.total ?? 0) as number };
+      // API 可能返回数组或 { items: [...], total: N } 对象，统一提取为数组
+      const payload = data?.data ?? data;
+      const items = Array.isArray(payload) ? payload : (payload?.items ?? []);
+      return { data: items as ContainerItem[], total: (data?.total ?? payload?.total ?? items.length) as number };
     },
   });
 

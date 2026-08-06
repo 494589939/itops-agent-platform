@@ -94,10 +94,16 @@ export const storageVolumeRepository = {
   },
 
   update(id: string, fields: Record<string, unknown>): void {
+    // 列名白名单：禁止把 fields 的 key（可能来自 req.body）直接拼进 SQL，
+    // 否则 PUT /api/v1/volumes/:id 传 {"name = 'x' --": ...} 可改写全表（SQL 注入）。
+    const ALLOWED_COLUMNS = new Set([
+      'name', 'driver', 'mount_point', 'size_gb', 'used_gb',
+      'status', 'host', 'type', 'tags',
+    ]);
     const setClauses: string[] = [];
     const values: unknown[] = [];
     for (const [key, value] of Object.entries(fields)) {
-      if (value !== undefined && key !== 'id') {
+      if (value !== undefined && ALLOWED_COLUMNS.has(key)) {
         setClauses.push(`${key} = ?`);
         values.push(value);
       }

@@ -6,6 +6,8 @@ import { multiHostDockerService } from '../services/multiHostDockerService';
 import { requireRole } from '../../../middleware/auth';
 import Docker from 'dockerode';
 import { getErrorMessage, getErrorStatusCode } from '../../../utils/errorHelpers';
+import { normalizeImage } from '../services/docker/imageOps';
+import type { DockerImage } from '../services/docker/dockerService';
 
 const router = Router();
 
@@ -39,8 +41,16 @@ router.get('/', async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 20;
     const search = (req.query.search as string || '').toLowerCase();
+    const endpointId = req.query.endpointId as string | undefined;
 
-    const allImages = await dockerService.listImages();
+    // 多主机：endpointId 指定时拉取目标主机镜像并归一化；否则走本地 dockerService
+    let allImages: DockerImage[];
+    if (endpointId && endpointId !== 'local') {
+      const d = getDocker(req);
+      allImages = (await d.listImages()).map(normalizeImage);
+    } else {
+      allImages = await dockerService.listImages();
+    }
 
     let filtered = allImages;
     if (search) {
@@ -57,7 +67,8 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json({ success: true, data: { items: data, total } });
   } catch (error: unknown) {
-    res.status(500).json({ success: false, message: getErrorMessage(error) });
+    const status = getErrorStatusCode(error) || 500;
+    res.status(status).json({ success: false, message: getErrorMessage(error) });
   }
 });
 
@@ -151,7 +162,15 @@ router.get('/:id', async (req: Request, res: Response) => {
   if (!checkDockerAvailable(res)) return;
 
   try {
-    const image = await dockerService.getImageInfo(req.params.id);
+    const endpointId = req.query.endpointId as string | undefined;
+    let image: DockerImage;
+    if (endpointId && endpointId !== 'local') {
+      const d = getDocker(req);
+      const info = await d.getImage(req.params.id).inspect();
+      image = normalizeImage(info);
+    } else {
+      image = await dockerService.getImageInfo(req.params.id);
+    }
     res.json({ success: true, data: image });
   } catch (error: unknown) {
     const status = getErrorStatusCode(error) || 404;
@@ -164,7 +183,15 @@ router.delete('/:id', requireRole('admin', 'operator'), async (req: Request, res
   if (!checkDockerAvailable(res)) return;
 
   try {
-    await dockerService.removeImage(req.params.id);
+    const endpointId = req.query.endpointId as string | undefined;
+    if (endpointId && endpointId !== 'local') {
+      const d = getDocker(req);
+      await d.getImage(req.params.id).remove({ force: req.query.force === 'true' });
+    } else {
+      const force = req.query.force === 'true';
+      const noprune = req.query.noprune === 'true';
+      await dockerService.removeImage(req.params.id, force, noprune);
+    }
     res.json({ success: true });
   } catch (error: unknown) {
     const status = getErrorStatusCode(error) || 500;

@@ -7,6 +7,8 @@
  * 拆分原则遵循 ADR-031 §二.3 模式 3 + lessons-learned §3.5
  */
 
+import type { ToolLink } from '../../api';
+
 export type FormMode = 'create' | 'edit' | null;
 
 export interface ToolLinkFormData {
@@ -31,5 +33,5 @@ export const DEFAULT_FORM_DATA: ToolLinkFormData = {
 
 export interface CategoryGroup {
   category: string;
-  tools: import('../../api').ToolLink[];
+  tools: ToolLink[];
 }

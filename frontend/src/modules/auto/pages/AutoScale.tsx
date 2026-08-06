@@ -1,9 +1,17 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useState, useEffect, useCallback } from 'react';
+
 import { useQuery } from '@tanstack/react-query';
-import { Card, Table, Tabs, Row, Col, Tag, Button, Modal, Input, Select, InputNumber, Switch, Space, message, Spin, Empty, DatePicker, Statistic } from 'antd';
+
+import { Card, Table, Tabs, Row, Col, Tag, Button, Modal, Input, Select, InputNumber, Switch, Space, Spin, Empty, DatePicker, Statistic } from 'antd';
+
 import { ReloadOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+
 import { TrendingUp, Activity, ArrowUpRight, ArrowDownRight, Server, Zap } from 'lucide-react';
+
 import api from '../../../lib/api';
+
 import type { ScaleRule, ScaleHistory, ScaleSummary } from '../api';
 
 interface ScaleTarget {

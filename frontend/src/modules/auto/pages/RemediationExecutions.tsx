@@ -169,6 +169,7 @@ export default function RemediationExecutions() {
   };
 
   const formatDuration = (ms?: number) => {
+    // eslint-disable-next-line eqeqeq -- == null 是「非 null 且非 undefined」惯用检查，改为 === 会漏判 undefined
     if (ms == null) return '-';
     if (!ms) return '-';
     if (ms < 1000) return `${ms}ms`;

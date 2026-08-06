@@ -1,9 +1,17 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Table, Button, Tag, Card, Row, Col, Drawer, Descriptions, Progress, message, Switch as _Switch, Space, Tooltip } from 'antd';
+
+import { Table, Button, Tag, Card, Row, Col, Drawer, Descriptions, Progress, Switch as _Switch, Space, Tooltip } from 'antd';
+
 import { Play, Square, Eye, Activity, RefreshCw } from 'lucide-react';
+
 import api from '../../../lib/api';
+
 import type { Socket } from 'socket.io-client';
+
 import io from 'socket.io-client';
+
 import { useAuth } from '../../../contexts/AuthContext';
 
 interface ContainerStats {
@@ -74,7 +82,12 @@ export default function ContainerMonitor() {
         api.get('/containers'),
         api.get('/docker-monitor/cluster-snapshot'),
       ]);
-      setData((containerRes.data?.data ?? containerRes.data) || []);
+      // API 可能返回数组或 { items: [...], total: N } 对象，统一提取为数组
+      const containerPayload = containerRes.data?.data ?? containerRes.data;
+      const containerList = Array.isArray(containerPayload)
+        ? containerPayload
+        : (containerPayload?.items ?? []);
+      setData(containerList);
       setClusterStats((snapRes.data?.data ?? snapRes.data) || {
         totalContainers: 0, runningContainers: 0, totalCpuPercent: '0',
         totalMemoryUsage: 0, totalMemoryLimit: 0, totalMemoryPercent: '0',

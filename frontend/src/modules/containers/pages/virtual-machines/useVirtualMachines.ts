@@ -78,7 +78,9 @@ export function useVirtualMachines() {
       if (statusFilter) params.status = statusFilter;
       if (selectedPlatformId) params.platformId = selectedPlatformId;
       const { data } = await api.get('/virtual-machines', { params });
-      return { data: data?.data || data || [], total: data?.total || 0, source: data?.source };
+      // 拦截器已解包：data 可能是数组或 { items, total, source } 对象
+      const list = Array.isArray(data) ? data : (data?.items ?? data?.rows ?? []);
+      return { data: list, total: data?.total ?? list.length ?? 0, source: data?.source };
     },
   });
 

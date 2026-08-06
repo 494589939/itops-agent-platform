@@ -1,19 +1,31 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useState } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { FileText, Plus, Download, Clock, Trash2, Edit2, Eye } from 'lucide-react';
-import { message } from 'antd';
+;
+
 import { logger } from '@/lib/logger';
+
 import api from '@/lib/api';
+
 import { getAxiosErrorMessage } from '../../../lib/errorHandler';
+
 import {
   monitorApi,
   type GeneratedReport,
   type ReportTemplate,
   type ScheduledReport,
 } from '../api';
+
 import { CreateTemplateModal, type CreateTemplateFormState } from './reports/CreateTemplateModal';
+
 import { GenerateReportModal } from './reports/GenerateReportModal';
+
 import { ViewReportModal } from './reports/ViewReportModal';
+
 import { AnalyticsTab } from './reports/AnalyticsTab';
 
 const TYPE_LABELS: Record<string, string> = {

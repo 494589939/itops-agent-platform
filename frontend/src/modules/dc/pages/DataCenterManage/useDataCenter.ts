@@ -1,7 +1,13 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useState, useEffect, useCallback } from 'react';
-import { Form, message } from 'antd';
+
+import { Form } from 'antd';
+
 import { useNavigate } from 'react-router-dom';
+
 import api from '../../../../lib/api';
+
 import type { Room, Rack, Slot, PDU, LifecycleRecord, OverviewData, Manufacturer, DeviceTypeInfo, PowerPanel, PowerFeed, Cable, DeviceSummary, DeviceGroup } from './types';
 
 interface ExportData {

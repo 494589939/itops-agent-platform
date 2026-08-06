@@ -50,7 +50,7 @@ export function EmailChannelSection({
             <input
               type="text"
               placeholder="smtp.qq.com"
-              value={config.email_config.smtp_host}
+              value={config.email_config?.smtp_host ?? ''}
               onChange={(e) =>
                 onChange({
                   email_config: { ...config.email_config, smtp_host: e.target.value },
@@ -65,7 +65,7 @@ export function EmailChannelSection({
               type="number"
               min="1"
               max="65535"
-              value={config.email_config.smtp_port}
+              value={config.email_config?.smtp_port ?? ''}
               onChange={(e) =>
                 onChange({
                   email_config: {
@@ -82,7 +82,7 @@ export function EmailChannelSection({
             <input
               type="email"
               placeholder="admin@example.com"
-              value={config.email_config.user}
+              value={config.email_config?.user ?? ''}
               onChange={(e) =>
                 onChange({
                   email_config: { ...config.email_config, user: e.target.value },
@@ -98,7 +98,7 @@ export function EmailChannelSection({
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
-                value={config.email_config.password}
+                value={config.email_config?.password ?? ''}
                 onChange={(e) =>
                   onChange({
                     email_config: { ...config.email_config, password: e.target.value },

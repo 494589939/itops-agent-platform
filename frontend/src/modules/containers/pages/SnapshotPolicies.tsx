@@ -1,7 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { message } from '@/lib/antdMessage';
 import { useState, useEffect, useMemo } from 'react';
-import { Table, Button, Modal, Tag, message, Form, Input, InputNumber, Switch, Popconfirm, Empty } from 'antd';
+
+import { Table, Button, Modal, Tag, Form, Input, InputNumber, Switch, Popconfirm, Empty } from 'antd';
+
 import { Plus, Edit, Trash2, Search, RefreshCw, Camera } from 'lucide-react';
+
 import api from '../../../lib/api';
 
 interface SnapshotPolicy {
@@ -80,6 +85,7 @@ export default function SnapshotPolicies() {
 
   // ── 派生 ──
   const filteredData = useMemo(() => {
+    if (!Array.isArray(data)) return [];
     if (statusFilter === 'all') return data;
     return data.filter(p => {
       const e = !!p.enabled;
@@ -88,6 +94,7 @@ export default function SnapshotPolicies() {
   }, [data, statusFilter]);
 
   const stats = useMemo(() => {
+    if (!Array.isArray(data)) return { total: 0, enabled: 0, memSnap: 0, totalRetention: 0 };
     let enabled = 0;
     let memSnap = 0;
     let totalRetention = 0;
@@ -342,7 +349,7 @@ export default function SnapshotPolicies() {
             tooltip={{
               title: cronHelpContent,
               color: '#1e293b',
-              overlayInnerStyle: { maxWidth: 320 },
+              styles: { body: { maxWidth: 320 } },
             }}
           >
             <Input placeholder="0 2 * * *" />

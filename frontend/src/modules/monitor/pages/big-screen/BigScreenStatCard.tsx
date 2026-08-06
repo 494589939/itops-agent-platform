@@ -89,9 +89,9 @@ export function getSeverityBadge(severity: string): string {
  */
 export function getSystemStatusIcon(status: string): JSX.Element {
   if (status === 'critical')
-    return <AlertCircle className="w-3 h-3 text-status-failed" />;
+    {return <AlertCircle className="w-3 h-3 text-status-failed" />;}
   if (status === 'warning')
-    return <AlertCircle className="w-3 h-3 text-status-warning" />;
+    {return <AlertCircle className="w-3 h-3 text-status-warning" />;}
   return <CheckCircle className="w-3 h-3 text-status-success" />;
 }
 

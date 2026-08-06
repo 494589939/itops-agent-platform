@@ -23,6 +23,33 @@ import {
   type NotificationConfig,
   type SaveStatus,
 } from './types';
+import { mergeNotificationConfig } from './helpers';
+
+/**
+ * 清洗 API 返回的配置：过滤 null/undefined，用默认值兜底
+ * 防止受控输入 value 变为 undefined 触发 React 警告
+ */
+function sanitizeConfig(raw: Partial<NotificationConfig> | null | undefined): NotificationConfig {
+  const merged = mergeNotificationConfig(DEFAULT_NOTIFICATION_CONFIG, raw || {});
+  return {
+    ...merged,
+    webhook_url: merged.webhook_url ?? '',
+    email_config: {
+      ...merged.email_config,
+      smtp_host: merged.email_config?.smtp_host ?? '',
+      smtp_port: merged.email_config?.smtp_port ?? 465,
+      user: merged.email_config?.user ?? '',
+      password: merged.email_config?.password ?? '',
+      password_set: merged.email_config?.password_set ?? false,
+    },
+    wechat_config: {
+      webhook_url: merged.wechat_config?.webhook_url ?? '',
+    },
+    dingtalk_config: {
+      webhook_url: merged.dingtalk_config?.webhook_url ?? '',
+    },
+  };
+}
 
 export interface UseNotificationSettingsResult {
   // state
@@ -144,7 +171,8 @@ export function useNotificationSettings(): UseNotificationSettingsResult {
     queryFn: async () => {
       const { data } = await api.get('/notification-config');
       if (data) {
-        setNotificationConfig(data);
+        // 用默认配置兜底 + 过滤 null/undefined，防止受控输入变为非受控
+        setNotificationConfig(sanitizeConfig(data));
       }
       return data;
     },

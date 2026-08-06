@@ -1,9 +1,17 @@
+
+import { message } from '@/lib/antdMessage';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Select, Button, Switch, Input, Space, message, Tooltip, InputNumber } from 'antd';
+
+import { Select, Button, Switch, Input, Space, Tooltip, InputNumber } from 'antd';
+
 import { Play, Square, Search, Download, Trash2, ArrowDown } from 'lucide-react';
+
 import api from '../../../lib/api';
+
 import type { Socket } from 'socket.io-client';
+
 import io from 'socket.io-client';
+
 import { useAuth } from '../../../contexts/AuthContext';
 
 interface Container {
@@ -56,7 +64,9 @@ export default function ContainerLogs() {
     setLoadingContainers(true);
     try {
       const { data } = await api.get('/containers');
-      setContainers(data || []);
+      // 拦截器已解包：data 可能是数组或 { items, total } 对象
+      const list = Array.isArray(data) ? data : (data?.items ?? []);
+      setContainers(list);
     } catch {
       message.error('加载容器列表失败');
     } finally {

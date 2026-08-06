@@ -76,7 +76,12 @@ class MultiHostDockerService {
     try {
       let docker: Docker;
       if (config.protocol === 'socket') {
-        docker = new Docker({ socketPath: '/var/run/docker.sock' });
+        // socket 协议：若端点配置了路径形式的 host（rootless / 自定义 socket），则使用之；否则默认
+        const socketPath =
+          typeof config.host === 'string' && config.host.startsWith('/')
+            ? config.host
+            : '/var/run/docker.sock';
+        docker = new Docker({ socketPath });
       } else {
         const opts: Record<string, unknown> = {
           host: config.host,
@@ -102,17 +107,25 @@ class MultiHostDockerService {
     try {
       let docker: Docker;
       if (config.protocol === 'socket') {
-        docker = new Docker({ socketPath: '/var/run/docker.sock' });
+        const socketPath =
+          typeof config.host === 'string' && config.host.startsWith('/')
+            ? config.host
+            : '/var/run/docker.sock';
+        docker = new Docker({ socketPath });
       } else {
         const opts: Record<string, unknown> = {
           host: config.host,
           port: config.port || 2375,
           protocol: config.protocol === 'tcp+tls' ? 'https' : 'http',
         };
-        if (config.tlsCa || config.tls_ca) {
-          opts.ca = Buffer.from((config.tlsCa || config.tls_ca) as string);
-          opts.cert = Buffer.from((config.tlsCert || config.tls_cert) as string);
-          opts.key = Buffer.from((config.tlsKey || config.tls_key) as string);
+        // TLS：必须 ca/cert/key 三者齐全才配置，否则部分配置会导致 Buffer.from(undefined) 崩溃
+        const ca = config.tlsCa || config.tls_ca;
+        const cert = config.tlsCert || config.tls_cert;
+        const key = config.tlsKey || config.tls_key;
+        if (ca && cert && key) {
+          opts.ca = Buffer.from(ca as string);
+          opts.cert = Buffer.from(cert as string);
+          opts.key = Buffer.from(key as string);
         }
         docker = new Docker(opts);
       }

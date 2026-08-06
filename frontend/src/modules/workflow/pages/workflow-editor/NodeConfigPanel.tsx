@@ -417,7 +417,7 @@ function AgentConfig({
                   {a.name}（{a.role}）
                 </option>
               ))}
-            {agents && agents.length === 0 && (
+            {agents?.length === 0 && (
               <option value="" disabled>
                 暂无可用 Agent，请先在 AI 模块创建
               </option>

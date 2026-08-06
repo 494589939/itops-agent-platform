@@ -1,6 +1,11 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, Select, Tag, Space, message, Popconfirm } from 'antd';
+
+import { Table, Button, Modal, Form, Input, Select, Tag, Space, Popconfirm } from 'antd';
+
 import { Plus, Edit, Trash2, Search, RefreshCw, Eye, FileText as _FileText } from 'lucide-react';
+
 import api from '../../../lib/api';
 
 interface ConfigTemplate {

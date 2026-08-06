@@ -1,9 +1,17 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useQuery } from '@tanstack/react-query';
+
 import { ChevronLeft, Clock, Edit, Trash2, Download, Settings } from 'lucide-react';
+
 import clsx from 'clsx';
+
 import { useState } from 'react';
-import { message, Modal } from 'antd';
+
+import { Modal } from 'antd';
+
 import api from '@/lib/api';
+
 import type { Agent, AgentExecution, AgentDetailInnerProps } from './types';
 
 export default function AgentDetail({ agentId, onBack, deleteMutation }: AgentDetailInnerProps) {

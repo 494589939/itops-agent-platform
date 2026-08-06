@@ -1,9 +1,17 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useState, useCallback } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, Table, Tag, Button, Modal, Input, Select, Form, Progress, Space, message, Empty, Tooltip, Alert } from 'antd';
+
+import { Card, Table, Tag, Button, Modal, Input, Select, Form, Progress, Space, Empty, Tooltip, Alert } from 'antd';
+
 import { ReloadOutlined, PlusOutlined, StopOutlined, ArrowRightOutlined, CheckCircleTwoTone, CloseCircleTwoTone, ClockCircleTwoTone, MinusCircleTwoTone } from '@ant-design/icons';
+
 import { useToast } from '../../../contexts/ToastContext';
+
 import { vmMigrationApi, type VmMigration, type VmMigrationInput } from '../api';
+
 import { ArrowRightLeft, Clock3, CheckCircle2, XCircle } from 'lucide-react';
 
 /**

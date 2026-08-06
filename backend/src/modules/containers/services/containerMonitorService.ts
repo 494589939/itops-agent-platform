@@ -92,7 +92,10 @@ class ContainerMonitorService {
       let totalCpu = 0, totalMemUsage = 0, totalMemLimit = 0;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       results.forEach((r: any) => {
-        totalCpu += parseFloat(r.cpuPercent || 0);
+        // r.cpuPercent 可能是 "NaN"/"Infinity"（getContainerStats 兜底前的脏值），
+        // parseFloat 会得到 NaN 并传染 totalCpu；用 isFinite 过滤。
+        const cpu = parseFloat(r.cpuPercent);
+        totalCpu += Number.isFinite(cpu) ? cpu : 0;
         totalMemUsage += r.memory?.usage || 0;
         totalMemLimit += r.memory?.limit || 0;
       });

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- 预存的大型分析仓储文件（>500 行）；拆分需重构 dashboard/report 数据访问，列为独立技术债任务 */
 /**
  * operationalAnalytics — 修复/SLA/服务器指标/告警来源/报告分析
  * 对应 dashboardRoutes.ts + reportRoutes.ts
@@ -441,9 +442,9 @@ export function getServerMetricsDashboard(
 
   allHistory.forEach((h) => {
     if (h.cpu_usage !== null)
-      cpuHistory.push({ server_id: h.server_id, value: h.cpu_usage, timestamp: h.timestamp });
+      {cpuHistory.push({ server_id: h.server_id, value: h.cpu_usage, timestamp: h.timestamp });}
     if (h.memory_usage !== null)
-      memoryHistory.push({ server_id: h.server_id, value: h.memory_usage, timestamp: h.timestamp });
+      {memoryHistory.push({ server_id: h.server_id, value: h.memory_usage, timestamp: h.timestamp });}
     diskHistory.push({ server_id: h.server_id, value: h.disk_usage ?? 0, timestamp: h.timestamp });
     networkHistory.push({ server_id: h.server_id, value: h.network_value, timestamp: h.timestamp });
   });

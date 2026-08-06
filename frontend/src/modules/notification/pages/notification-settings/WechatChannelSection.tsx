@@ -48,7 +48,7 @@ export function WechatChannelSection({
           <div className="relative">
             <input
               type={showUrl ? 'text' : 'password'}
-              value={config.wechat_config.webhook_url}
+              value={config.wechat_config?.webhook_url ?? ''}
               onChange={(e) =>
                 onChange({
                   wechat_config: { webhook_url: e.target.value },

@@ -32,7 +32,7 @@ export function WebhookChannelSection({ config, onChange }: WebhookChannelSectio
           <input
             type="url"
             placeholder="https://hooks.example.com/webhook"
-            value={config.webhook_url}
+            value={config.webhook_url ?? ''}
             onChange={(e) => onChange({ webhook_url: e.target.value })}
             className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-primary"
           />

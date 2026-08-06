@@ -41,4 +41,4 @@ ENV VITE_HMR_CLIENT_PORT=5173
 
 # 启动 Vite：直接调二进制绕过 npm stdout 缓冲（与 backend 用 tsx 二进制同理）
 # --host 0.0.0.0 让容器外可访问
-CMD ["node", "./node_modules/vite/bin/vite.js", "--host", "0.0.0.0", "--port", "3000"]</new_str>
+CMD ["node", "./node_modules/vite/bin/vite.js", "--host", "0.0.0.0", "--port", "3000"]

@@ -1,10 +1,19 @@
+﻿
+import { message } from '@/lib/antdMessage';
 import { useState } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { Bell, CheckCircle, XCircle, Filter, Search, Clock, RotateCw, AlertCircle } from 'lucide-react';
+
 import clsx from 'clsx';
-import { message, Modal } from 'antd';
+
+import { Modal } from 'antd';
+
 import api from '../../../lib/api';
+
 import { getAxiosErrorMessage } from '@/lib/errorHandler';
+
 import type { NotificationRecord } from '../api';
 
 export default function Notifications() {
