@@ -1,0 +1,34 @@
+﻿NOTICE
+======
+
+This project incorporates design patterns and data model concepts inspired by:
+
+  NetBox
+  https://github.com/netbox-community/netbox
+  Copyright (c) 2020-2025 NetBox Community
+  Licensed under the Apache License, Version 2.0.
+
+Specifically, the following components reference NetBox's DCIM model architecture:
+
+  - backend/src/models/migrations/v031_device_manufacturers.ts
+    (inspired by NetBox dcim.Manufacturer)
+  - backend/src/models/migrations/v032_device_types.ts
+    (inspired by NetBox dcim.DeviceType)
+  - backend/src/models/migrations/v033_device_type_slot_definitions.ts
+    (inspired by NetBox dcim.{PowerPort,Interface,ConsolePort}Template)
+  - backend/src/models/migrations/v034_dc_power_panels.ts
+    (inspired by NetBox dcim.PowerPanel)
+  - backend/src/models/migrations/v035_dc_power_feeds.ts
+    (inspired by NetBox dcim.PowerFeed)
+  - backend/src/models/migrations/v036_dc_cables.ts
+    (inspired by NetBox dcim.Cable)
+
+These files translate NetBox's Django/Python ORM models into TypeScript + SQLite.
+The translation is original work; no Python source code was copied verbatim.
+
+--------------------------------------------------------------------
+This product includes software developed by the NetBox Community
+and its contributors.  No NetBox source code is distributed as part
+of this project; only database schema designs and API patterns have
+been referenced.
+--------------------------------------------------------------------

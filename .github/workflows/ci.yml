@@ -1,0 +1,210 @@
+name: CI (Build + Lint + Test)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run TypeScript check
+        working-directory: ./backend
+        run: npx tsc --noEmit
+
+      - name: Run ESLint
+        working-directory: ./backend
+        run: npm run lint --if-present
+
+  frontend-lint:
+    name: Frontend Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run TypeScript check
+        working-directory: ./frontend
+        run: npx tsc --noEmit
+
+      - name: Run ESLint
+        working-directory: ./frontend
+        run: npm run lint --if-present
+
+      # ADR-020 v2.2（2026-07-21）：新文件行数检查（软警告，不阻断）
+      # 仅扫描本次 PR 中变更的 .ts/.tsx 新文件
+      - name: Check new file line counts (soft warning)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "## 新文件行数检查" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          WARN=false
+          git diff --name-only --diff-filter=A origin/${{ github.base_ref }}...HEAD | \
+            grep -E '\.(ts|tsx)$' | grep -vE '(\.test\.|\.spec\.|node_modules)' | while read f; do
+            if [ -f "$f" ]; then
+              LINES=$(wc -l < "$f")
+              if [ "$LINES" -gt 500 ]; then
+                echo "::warning file=$f::新文件 $LINES 行，超过 500 行阈值（参考 ADR-020 v2.2）" >&2
+              fi
+            fi
+          done
+          echo "✅ 检查完成（超 500 行的会在上面以 warning 标记）" >> $GITHUB_STEP_SUMMARY
+
+  architecture-check:
+    name: Architecture Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies (depcruiser, madge)
+        run: npm ci
+
+      - name: Run architecture check
+        run: node scripts/check-architecture.js
+
+      - name: Run dependency-cruiser
+        run: npx depcruise --config .dependency-cruiser.json backend/src --output-type text
+        continue-on-error: false
+
+  backend-test:
+    name: Backend Test
+    runs-on: ubuntu-latest
+    needs: [backend-lint, architecture-check]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run tests with coverage
+        working-directory: ./backend
+        run: npm run test:coverage
+        env:
+          JWT_SECRET: test-secret-for-ci
+          DOUBAO_API_KEY: test-api-key
+
+  frontend-test:
+    name: Frontend Test
+    runs-on: ubuntu-latest
+    needs: [frontend-lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run tests with coverage
+        working-directory: ./frontend
+        run: npm run test:coverage
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    needs: [frontend-lint, frontend-test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: ./frontend
+        run: npm run build
+
+  docker-build:
+    name: Docker Build (Verify)
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend (verify only)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.backend
+          push: false
+          load: true
+          tags: itops-backend:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Frontend (verify only)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.frontend
+          push: false
+          load: true
+          tags: itops-frontend:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

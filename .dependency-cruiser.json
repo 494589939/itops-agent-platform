@@ -1,0 +1,138 @@
+{
+
+  "options": {
+    "doNotFollow": {
+      "path": "node_modules"
+    },
+    "reporterOptions": {
+      "dot": {
+        "collapsePattern": "node_modules/[^/]+"
+      },
+      "archi": {
+        "collapsePattern": "node_modules/[^/]+"
+      }
+    }
+  },
+
+  "forbidden": [
+    {
+      "name": "core-禁止依赖-modules",
+      "severity": "error",
+      "comment": "core/ 是基础设施层，不得依赖任何业务模块（参照 ongrid: shared_pkg mayDependOn: []）",
+      "from": {
+        "path": "^src/core/"
+      },
+      "to": {
+        "path": "^src/modules/"
+      }
+    },
+    {
+      "name": "repositories-禁止依赖-modules",
+      "severity": "error",
+      "comment": "repositories/ 层是纯数据访问层，不能反向依赖 modules/ 业务层",
+      "from": {
+        "path": "^src/repositories"
+      },
+      "to": {
+        "path": "^src/modules"
+      }
+    },
+    {
+      "name": "modules-禁止跨模块路由依赖",
+      "severity": "error",
+      "comment": "modules/ 之间禁止直接 import 对方的 routes.ts（防止路由层耦合）",
+      "from": {
+        "path": "^src/modules/([^/]+)/routes\\.ts$"
+      },
+      "to": {
+        "path": "^src/modules/[^/]+/routes(\\.ts|/[^/]+)$",
+        "pathNot": "^src/modules/$1/routes(\\.ts|/[^/]+)$"
+      }
+    },
+    {
+      "name": "modules-禁止循环依赖-core",
+      "severity": "error",
+      "comment": "core/ 中的模块之间也不应有循环依赖",
+      "from": {
+        "path": "^src/core/"
+      },
+      "to": {
+        "path": "^src/core/",
+        "circular": true
+      }
+    },
+    {
+      "name": "modules-禁止循环依赖",
+      "severity": "error",
+      "comment": "业务模块之间禁止循环依赖",
+      "from": {
+        "path": "^src/modules/"
+      },
+      "to": {
+        "path": "^src/modules/",
+        "circular": true
+      }
+    },
+    {
+      "name": "frontend-禁止跨模块直接引用页面",
+      "severity": "error",
+      "comment": "前端模块之间禁止直接 import 对方的页面组件（使用 shared/components/ 共享组件）",
+      "from": {
+        "path": "^frontend/src/modules/([^/]+)/"
+      },
+      "to": {
+        "path": "^frontend/src/modules/",
+        "pathNot": "^frontend/src/modules/$1/"
+      }
+    },
+    {
+      "name": "routes-禁止直访-Repository",
+      "severity": "error",
+      "comment": "路由层（modules/<m>/routes/）禁止直接访问 Repository——必须经 Service 层（architecture.md §3.2）。\nseverity: error 强制禁止新增违规（CI 会在 depcruise 失败时阻止合并）。\n豁免：modules/database/（数据源管理本身）。",
+      "from": {
+        "path": "^src/modules/[^/]+/routes/",
+        "pathNot": [
+          "^src/modules/database/routes/"
+        ]
+      },
+      "to": {
+        "path": "^src/repositories/"
+      }
+    },
+    {
+      "name": "see-eslint-max-lines-for-file-size",
+      "severity": "info",
+      "comment": "单文件行数约束不由 dependency-cruiser 校验（depcruise 只分析依赖关系）。\n**文件大小告警由 ESLint `max-lines` 规则承担**（配置在 backend/.eslintrc.json 和 frontend/.eslintrc.json）：\n  - \"max-lines\": [\"warn\", { \"max\": 500, \"skipComments\": true, \"skipBlankLines\": true }]\n- 阈值：500 行（不含注释和空行）\n- severity: warn（不阻断 CI，但 PR review 时会高亮）\n- 豁免：*.test.ts（测试文件可能超长）、migrations/v001_initial_schema.ts（一次性 SQL 拼接）\n- 触发后的处理：按 architecture.md §3.3「大型服务拆分为子目录」拆分（参考 enhancedNodeExecutor / remediationService / sshService / vendorAdapter / llmService / agentExecutor 已完成的 6 次拆分）",
+      "from": {},
+      "to": {}
+    }
+  ],
+
+  "allowedSeverity": "warn",
+  "allowed": [
+    {
+      "from": { "path": "^src/core/" },
+      "to": { "path": "^src/core/" }
+    },
+    {
+      "from": { "path": "^src/modules/" },
+      "to": { "path": "^src/core/" }
+    },
+    {
+      "from": { "path": "^src/app\\.ts$" },
+      "to": { "path": "^src/" }
+    },
+    {
+      "from": { "path": "^frontend/src/modules/" },
+      "to": { "path": "^frontend/src/shared/" }
+    },
+    {
+      "from": { "path": "^src/modules/([^/]+)/services/" },
+      "to": { "path": "^src/modules/([^/]+)/services/" }
+    },
+    {
+      "from": { "path": "^src/modules/database/" },
+      "to": { "path": "^src/repositories/" }
+    }
+  ]
+}

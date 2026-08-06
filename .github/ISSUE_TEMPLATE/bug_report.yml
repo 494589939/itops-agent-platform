@@ -1,0 +1,147 @@
+name: Bug Report
+description: 报告一个 Bug 或问题
+title: "[Bug]: "
+labels: ["bug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你的反馈！请尽可能详细地描述问题，帮助我们复现和修复。
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: 受影响的功能模块
+      description: 请选择受影响的功能模块
+      options:
+        - AI 智能 (Agent / 知识库 / RCA / AI 修复)
+        - 告警中心 (告警 / 降噪 / 关联 / Webhook)
+        - 审计日志
+        - 认证与授权 (登录 / 用户)
+        - 自动化运维 (修复策略 / 自动伸缩)
+        - 备份恢复
+        - 变更管理 (变更 / 审批)
+        - 配置管理 (模板 / Compose / 配置修复)
+        - 容器与虚拟机 (Docker / VMware / Proxmox / KVM)
+        - 数据库连接管理
+        - 数据中心基础设施 (机房 / 机柜 / 设备)
+        - 导入导出
+        - Kubernetes 集群管理
+        - 联动统计 / 巡检中心
+        - MCP 工具协议
+        - 监控仪表盘 (仪表盘 / 报告 / 成本分析 / Prometheus / Zabbix)
+        - 网络管理 (设备 / 拓扑 / SNMP / 发现)
+        - 通知系统 (渠道 / 发送)
+        - 服务器管理 (服务器 / SSH 密钥 / 分组 / 终端)
+        - 系统设置
+        - 工具箱
+        - 脚本 / 终端 / AI 命令
+        - 工作流编排
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug 描述
+      description: 请清晰简要地描述问题
+      placeholder: 描述你遇到的问题...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+      description: 请详细说明如何复现这个问题
+      placeholder: |
+        1. 进入 '...' 页面
+        2. 点击 '...' 按钮
+        3. 输入 '...'
+        4. 出现错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      description: 你认为应该发生什么？
+      placeholder: 描述你期望的行为...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么？
+      placeholder: 描述实际发生的行为...
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      description: 你使用的是什么操作系统？
+      placeholder: 例如：Windows 11, macOS 14, Ubuntu 22.04
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: 浏览器（前端问题适用）
+      description: 你使用的是什么浏览器？
+      placeholder: 例如：Chrome 120, Firefox 121, Safari 17
+    validations:
+      required: false
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js 版本
+      description: 你使用的 Node.js 版本？
+      placeholder: 例如：Node.js 20.10.0
+    validations:
+      required: false
+
+  - type: input
+    id: app-version
+    attributes:
+      label: 应用版本
+      description: 你使用的 ITOps Agent Platform 版本？
+      placeholder: 例如：v3.0.5
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志输出
+      description: 如果有错误日志，请粘贴到这里
+      placeholder: 粘贴日志内容...
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图
+      description: 如果可以的话，请添加截图帮助说明问题
+      placeholder: 拖放截图到这里...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充信息
+      description: 任何其他你认为有用的信息
+      placeholder: 补充信息...
+    validations:
+      required: false
