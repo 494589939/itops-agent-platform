@@ -1,5 +1,6 @@
 import type { Server, Socket } from 'socket.io';
 import net from 'net';
+import { randomUUID } from 'crypto';
 import { logger } from '../../../utils/logger';
 import { verifyToken, type AuthUser } from '../../../middleware/auth';
 import { networkDeviceRepository } from '../../../repositories/networkDeviceRepository';
@@ -103,7 +104,7 @@ class VNCProxyService {
             }
           }
 
-          const sessionId = `${data.serverId}-${Date.now()}`;
+          const sessionId = `${data.serverId}-${randomUUID()}`;
           const session: VNCSession = {
             id: sessionId,
             serverId: data.serverId,
@@ -119,10 +120,15 @@ class VNCProxyService {
             port: data.vncPort
           });
 
+          // BUG2 fix: 设置连接超时，VNC 主机不可达时不会永久挂起
+          vncSocket.setTimeout(5000);
+
           session.vncSocket = vncSocket;
           this.sessions.set(sessionId, session);
 
           vncSocket.on('connect', () => {
+            // 连接成功后清除超时
+            vncSocket.setTimeout(0);
             logger.info(`Connected to VNC server ${data.vncHost}:${data.vncPort}`);
             socket.emit('vnc:connected', { sessionId });
           });
@@ -131,8 +137,19 @@ class VNCProxyService {
             socket.emit('vnc:data', chunk);
           });
 
+          vncSocket.on('timeout', () => {
+            logger.error(`VNC connection timeout to ${data.vncHost}:${data.vncPort}`);
+            socket.emit('vnc:error', { message: 'VNC connection timeout' });
+            // destroy() 不传 error，避免触发 error handler 重复 emit vnc:error
+            vncSocket.destroy();
+            this.sessions.delete(sessionId);
+          });
+
           vncSocket.on('error', (err) => {
             logger.error(`VNC connection error: ${err.message}`);
+            // BUG4 fix: error 时清理 vncSocket 和 session
+            vncSocket.destroy();
+            this.sessions.delete(sessionId);
             socket.emit('vnc:error', { message: err.message });
           });
 
@@ -142,18 +159,26 @@ class VNCProxyService {
             this.sessions.delete(sessionId);
           });
 
-          socket.on('vnc:client-data', (chunk) => {
+          // BUG1 fix: 新建会话前先移除旧的 vnc:client-data 和 vnc:disconnect 监听器
+          // 旧实现每次 connect 都新增监听器且永不移除，导致数据写到所有 VNC 连接
+          socket.removeAllListeners('vnc:client-data');
+          socket.removeAllListeners('vnc:disconnect');
+
+          const clientDataHandler = (chunk: Buffer) => {
             if (vncSocket && !vncSocket.destroyed) {
               vncSocket.write(chunk);
             }
-          });
+          };
 
-          socket.on('vnc:disconnect', () => {
+          const disconnectHandler = () => {
             if (vncSocket) {
               vncSocket.destroy();
             }
             this.sessions.delete(sessionId);
-          });
+          };
+
+          socket.on('vnc:client-data', clientDataHandler);
+          socket.on('vnc:disconnect', disconnectHandler);
         } catch (error) {
           logger.error('Failed to establish VNC connection:', error);
           socket.emit('vnc:error', { message: error instanceof Error ? error.message : 'Unknown error' });

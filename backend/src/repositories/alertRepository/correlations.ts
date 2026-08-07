@@ -228,8 +228,11 @@ export const correlationsRepo = {
    * 对应：alertCorrelationService.deleteGroup
    */
   deleteGroup(groupId: string): void {
-    db.prepare('DELETE FROM alert_correlation_members WHERE group_id = ?').run(groupId);
-    db.prepare('DELETE FROM alert_correlation_groups WHERE id = ?').run(groupId);
+    const tx = db.transaction((id: string) => {
+      db.prepare('DELETE FROM alert_correlation_members WHERE group_id = ?').run(id);
+      db.prepare('DELETE FROM alert_correlation_groups WHERE id = ?').run(id);
+    });
+    tx(groupId);
   },
 
   /**

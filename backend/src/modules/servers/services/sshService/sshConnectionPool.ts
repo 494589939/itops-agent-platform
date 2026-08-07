@@ -277,6 +277,21 @@ export class SSHConnectionPool {
 
       conn.on('ready', () => {
         logger.debug(`✅ SSH connection established to ${server.hostname}:${server.port || 22}`);
+        // 移除连接阶段的监听器
+        conn.removeAllListeners('error');
+        conn.removeAllListeners('timeout');
+        // 挂上运行阶段的错误监听器
+        conn.on('error', (err) => {
+          logger.warn(`SSH connection error for server (runtime): ${err.message}`);
+          // 标记连接为不健康，下次 acquire 时会被跳过
+          for (const conns of this.pool.values()) {
+            for (const c of conns) {
+              if (c.client === conn) {
+                c.healthCheckFailed = 3; // 标记为不可用
+              }
+            }
+          }
+        });
         safeResolve(conn);
       }).on('error', (err) => {
         safeReject(new Error(`SSH connection error: ${err.message}`));

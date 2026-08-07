@@ -89,8 +89,11 @@ export const groupsRepo = {
 
   /** 删除分组（先删映射再删分组） */
   delete(id: string): void {
-    db.prepare('DELETE FROM server_group_mapping WHERE group_id = ?').run(id);
-    db.prepare('DELETE FROM server_groups WHERE id = ?').run(id);
+    const tx = db.transaction((groupId: string) => {
+      db.prepare('DELETE FROM server_group_mapping WHERE group_id = ?').run(groupId);
+      db.prepare('DELETE FROM server_groups WHERE id = ?').run(groupId);
+    });
+    tx(id);
   },
 
   // ── server_group_mapping ──

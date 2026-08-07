@@ -215,7 +215,8 @@ export const devicesRepo = {
     const params: unknown[] = [];
     if (filters.rackId) { query += ' AND rack_id = ?'; params.push(filters.rackId); }
     if (filters.deviceType) { query += ' AND device_type = ?'; params.push(filters.deviceType); }
-    query += ` LIMIT ${filters.limit || 100}`;
+    query += ' LIMIT ?';
+    params.push(Math.min(Number(filters.limit) || 100, 200));
     return db.prepare(query).all(...params) as Array<Record<string, unknown>>;
   },
 

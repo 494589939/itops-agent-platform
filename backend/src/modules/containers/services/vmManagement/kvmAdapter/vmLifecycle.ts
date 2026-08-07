@@ -1,3 +1,4 @@
+import path from 'path';
 import { logger } from '../../../../../utils/logger';
 import type {
   VirtualMachine,
@@ -5,6 +6,7 @@ import type {
   CloneVMRequest,
 } from '../../../../../types/vmManagement';
 import type { KvmSshClient } from './sshClient';
+import { validateVMId } from './sshClient';
 import { parseVirshList, mapVirshStatus, mapVirshPowerState } from './mappers';
 import { powerOnVM } from './vmPower';
 
@@ -60,6 +62,7 @@ export async function listVMs(client: KvmSshClient): Promise<VirtualMachine[]> {
 }
 
 export async function getVM(client: KvmSshClient, vmId: string): Promise<VirtualMachine | null> {
+  validateVMId(vmId);
   await client.ensureConnected();
   logger.info(`📋 获取 KVM 虚拟机详情: ${vmId}`);
 
@@ -90,20 +93,23 @@ export async function getVM(client: KvmSshClient, vmId: string): Promise<Virtual
 }
 
 export async function createVM(client: KvmSshClient, request: CreateVMRequest): Promise<VirtualMachine> {
+  validateVMId(request.name);
   await client.ensureConnected();
   logger.info(`🚀 创建 KVM 虚拟机: ${request.name}`);
 
   const vcpus = request.config.numCPUs;
   const memory = request.config.memoryMB;
   const diskSize = request.config.disks?.[0]?.sizeGB || 10;
-  const diskPath = `/var/lib/libvirt/images/${request.name}.qcow2`;
+  // path.basename 防止路径遍历
+  const safeName = path.basename(request.name);
+  const diskPath = `/var/lib/libvirt/images/${safeName}.qcow2`;
 
   const cmd = [
     'virt-install',
-    '--name', `"${request.name}"`,
+    '--name', safeName,
     '--vcpus', String(vcpus),
     '--memory', String(memory),
-    '--disk', `path="${diskPath}",size=${diskSize},format=qcow2`,
+    '--disk', `path=${diskPath},size=${diskSize},format=qcow2`,
     '--network', 'network=default',
     '--graphics', 'none',
     '--noautoconsole',
@@ -122,6 +128,8 @@ export async function createVM(client: KvmSshClient, request: CreateVMRequest): 
 }
 
 export async function cloneVM(client: KvmSshClient, request: CloneVMRequest): Promise<VirtualMachine> {
+  validateVMId(request.vmId);
+  validateVMId(request.name);
   await client.ensureConnected();
   logger.info(`📋 克隆 KVM 虚拟机: ${request.vmId} -> ${request.name}`);
 
@@ -133,26 +141,31 @@ export async function cloneVM(client: KvmSshClient, request: CloneVMRequest): Pr
   try {
     const { stdout: xml } = await client.execSSH(`virsh dumpxml "${request.vmId}"`);
 
-    const tempFile = `/tmp/${request.name}.xml`;
-    const escapedName = request.name.replace(/"/g, '\\"');
-    const escapedVmId = request.vmId.replace(/"/g, '\\"');
+    // path.basename 防止路径遍历（如 request.name = "../../etc/cron.d/evil"）
+    const safeName = path.basename(request.name);
+    const tempFile = `/tmp/${safeName}.xml`;
 
-    const escapedXml = xml.replace(/'/g, "'\\''");
-    await client.execSSH(
-      `echo '${escapedXml}' | sed 's/<name>${escapedVmId}<\\/name>/<name>${escapedName}<\\/name>/' | sed '/<uuid>/d' > ${tempFile}`
-    );
+    // vmId 和 name 已通过白名单校验（仅允许 [a-zA-Z0-9._-]），可安全用于 sed
+    // 在 Node.js 中替换 <name> 标签和删除 <uuid> 标签，避免远程 sed 命令注入
+    const modifiedXml = xml
+      .replace(/<name>[^<]*<\/name>/, `<name>${safeName}</name>`)
+      .replace(/<uuid>.*?<\/uuid>/gs, '');
+
+    // 用 base64 编码安全传输 XML 到远程文件（避免 shell 引号转义问题）
+    const xmlBase64 = Buffer.from(modifiedXml).toString('base64');
+    await client.execSSH(`echo '${xmlBase64}' | base64 -d > ${tempFile}`);
 
     await client.execSSH(`virsh define ${tempFile}`);
     await client.execSSH(`rm -f ${tempFile}`);
 
     if (request.powerOn) {
-      await powerOnVM(client, request.name);
+      await powerOnVM(client, safeName);
     }
 
     return {
       ...sourceVM,
-      id: request.name,
-      name: request.name,
+      id: safeName,
+      name: safeName,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       powerState: request.powerOn ? 'poweredOn' : 'poweredOff',
@@ -165,6 +178,7 @@ export async function cloneVM(client: KvmSshClient, request: CloneVMRequest): Pr
 }
 
 export async function deleteVM(client: KvmSshClient, vmId: string): Promise<void> {
+  validateVMId(vmId);
   await client.ensureConnected();
   logger.info(`🗑️ 删除 KVM 虚拟机: ${vmId}`);
 

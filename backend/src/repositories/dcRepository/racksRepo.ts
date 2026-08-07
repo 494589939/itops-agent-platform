@@ -77,8 +77,11 @@ export const racksRepo = {
 
   /** 删除机柜（级联删除其下所有 slot） */
   delete(id: string): void {
-    db.prepare('DELETE FROM dc_rack_slots WHERE rack_id = ?').run(id);
-    db.prepare('DELETE FROM dc_racks WHERE id = ?').run(id);
+    const tx = db.transaction((rackId: string) => {
+      db.prepare('DELETE FROM dc_rack_slots WHERE rack_id = ?').run(rackId);
+      db.prepare('DELETE FROM dc_racks WHERE id = ?').run(rackId);
+    });
+    tx(id);
   },
 
   count(): number {

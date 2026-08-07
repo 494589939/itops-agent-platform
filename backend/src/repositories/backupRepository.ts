@@ -6,7 +6,8 @@ export const backupRepository = {
     const params: unknown[] = [];
     if (filters.backupType) { query += ' AND backup_type = ?'; params.push(filters.backupType); }
     query += ' ORDER BY created_at DESC';
-    query += ` LIMIT ${filters.limit || 20}`;
+    query += ' LIMIT ?';
+    params.push(Math.min(Number(filters.limit) || 20, 200));
     return db.prepare(query).all(...params);
   },
 };

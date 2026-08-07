@@ -77,8 +77,10 @@ export const alertConfigsRepo = {
     if (filters.level) { sql += ' AND level = ?'; params.push(filters.level); }
     if (filters.status) { sql += ' AND status = ?'; params.push(filters.status); }
     sql += ' ORDER BY triggered_at DESC';
-    sql += ` LIMIT ${filters.limit || 50}`;
-    if (filters.offset) { sql += ` OFFSET ${filters.offset}`; }
+    const limit = Math.min(Number(filters.limit) || 50, 200);
+    const offset = Math.max(Number(filters.offset) || 0, 0);
+    sql += ' LIMIT ? OFFSET ?';
+    params.push(limit, offset);
     return db.prepare(sql).all(...params) as AlertNotificationRecord[];
   },
 

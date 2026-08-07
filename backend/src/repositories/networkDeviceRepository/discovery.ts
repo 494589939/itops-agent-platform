@@ -56,8 +56,11 @@ export const networkDeviceDiscoveryRepo = {
 
   /** 删除扫描任务 */
   deleteDiscoveryJob(id: string): void {
-    db.prepare('DELETE FROM network_discovery_results WHERE job_id = ?').run(id);
-    db.prepare('DELETE FROM network_discovery_jobs WHERE id = ?').run(id);
+    const tx = db.transaction((jobId: string) => {
+      db.prepare('DELETE FROM network_discovery_results WHERE job_id = ?').run(jobId);
+      db.prepare('DELETE FROM network_discovery_jobs WHERE id = ?').run(jobId);
+    });
+    tx(id);
   },
 
   // ── Discovery Results ──

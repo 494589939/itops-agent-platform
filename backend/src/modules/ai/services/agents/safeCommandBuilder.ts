@@ -25,8 +25,9 @@ import { executeCommand } from '../../../servers/services/sshService';
  */
 const SAFE_FILENAME_CHARS = /^[a-zA-Z0-9._\/\-@:]+$/;
 const SAFE_UNIT_CHARS = /^[a-zA-Z0-9._\-@]+$/;
-const SAFE_PATH_CHARS = /^[a-zA-Z0-9.\/\-_~]+$/;
+const SAFE_PATH_CHARS = /^[a-zA-Z0-9.\/\-_~+%=: @\\]+$/;
 const SAFE_NUMBER_OR_EMPTY = /^[0-9]*$/;
+const SAFE_JOURNALCTL_LEVEL = /^(emerg|alert|crit|err|warning|notice|info|debug|[0-7])$/;
 
 /**
  * 拒绝非法字符串并抛出清晰错误
@@ -200,7 +201,7 @@ export async function sshSystemLogs(
     argv.push('-u', unit);
   }
   if (level) {
-    assertSafe(level, SAFE_NUMBER_OR_EMPTY, 'level');
+    assertSafe(level, SAFE_JOURNALCTL_LEVEL, 'level');
     argv.push('-p', level);
   }
   // since 不进入 argv（避免任意字符串），用 days-ago 数值替代

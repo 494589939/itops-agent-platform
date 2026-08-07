@@ -93,7 +93,7 @@ export default function useDataRoom(): UseDataRoomReturn {
             const status = (err as { response?: { status?: number } })?.response?.status;
             // batch 失败不影响是否演示模式，仅记 warn
             logger.warn(`[useDataRoom] /dc/slots/batch 失败: status=${status}`);
-            return { data: { data: { slots: [], racks: [], rooms: [] } } };
+            return { data: { slots: [], racks: [], rooms: [] } };
           }),
         ]);
 

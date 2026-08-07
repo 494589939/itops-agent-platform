@@ -1,9 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../../../../../utils/logger';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+// 白名单：vmId/name 只允许字母、数字、点、下划线、连字符，防止 shell 元字符注入
+const VM_ID_PATTERN = /^[a-zA-Z0-9._-]+$/;
+
+/**
+ * 校验 VM ID/名称，防止命令注入。
+ * virsh 命令的参数（如 domstate/dumpxml/undefine 的 vmId）必须通过此校验。
+ */
+export function validateVMId(id: string): void {
+  if (!id || !VM_ID_PATTERN.test(id)) {
+    throw new Error(`Invalid VM id/name (only alphanumeric, dot, underscore, hyphen allowed): ${id}`);
+  }
+}
 
 export interface KvmConfig {
   host: string;
@@ -16,6 +29,9 @@ export interface KvmConfig {
 
 /**
  * KVM/libvirt SSH 客户端：封装 SSH 远程命令执行和连接管理。
+ *
+ * 安全说明：使用 execFile（数组式 argv，不经本地 shell）替代 exec（字符串拼接，经 shell 解析），
+ * 消除 $()、反引号、分号等 shell 元字符的本地命令注入风险。
  */
 export class KvmSshClient {
   readonly host: string;
@@ -24,7 +40,8 @@ export class KvmSshClient {
   readonly platformId: string;
   private password?: string;
   private privateKey?: string;
-  private sshCommand: string;
+  private sshArgs: string[];
+  private sshExecutable: string;
   private _connected = false;
 
   constructor(platformId: string, config: KvmConfig) {
@@ -34,31 +51,41 @@ export class KvmSshClient {
     this.username = config.username || 'root';
     this.password = config.password;
     this.privateKey = config.privateKey || config.private_key;
-    this.sshCommand = this.buildSSHCommand();
+    const built = this.buildSSHArgs();
+    this.sshExecutable = built.executable;
+    this.sshArgs = built.args;
   }
 
   get connected(): boolean {
     return this._connected;
   }
 
-  private buildSSHCommand(): string {
-    const args: string[] = [
-      'ssh',
+  /**
+   * 构建 SSH 命令的 argv 数组（不经 shell）。
+   * 有密码时用 sshpass 包装；execFile 数组传参，密码不经 shell 解析。
+   */
+  private buildSSHArgs(): { executable: string; args: string[] } {
+    const sshArgs: string[] = [
       '-o', 'StrictHostKeyChecking=no',
       '-o', 'UserKnownHostsFile=/dev/null',
-      '-o', `ConnectTimeout=10`,
+      '-o', 'ConnectTimeout=10',
       '-p', String(this.port),
     ];
 
-    if (this.password) {
-      args.unshift('sshpass', '-p', `"${this.password}"`);
-    } else if (this.privateKey) {
-      args.push('-i', `"${this.privateKey}"`);
+    if (this.privateKey) {
+      sshArgs.push('-i', this.privateKey);
     }
 
-    args.push(`"${this.username}@${this.host}"`);
+    sshArgs.push(`${this.username}@${this.host}`);
 
-    return args.join(' ');
+    if (this.password) {
+      return {
+        executable: 'sshpass',
+        args: ['-p', this.password, 'ssh', ...sshArgs],
+      };
+    }
+
+    return { executable: 'ssh', args: sshArgs };
   }
 
   async connect(): Promise<void> {
@@ -99,11 +126,19 @@ export class KvmSshClient {
     if (!this._connected) await this.connect();
   }
 
-  async execSSH(command: string): Promise<{ stdout: string; stderr: string }> {
-    const fullCommand = `${this.sshCommand} "${command.replace(/"/g, '\\"')}"`;
+  /**
+   * 在远程主机上执行命令。
+   *
+   * 安全说明：
+   * - 使用 execFile（不经本地 shell），消除本地命令注入
+   * - remoteCommand 仍在远程主机的登录 shell 中执行，调用方必须对参数做白名单校验
+   *   （如 validateVMId），防止远程 shell 注入
+   */
+  async execSSH(remoteCommand: string): Promise<{ stdout: string; stderr: string }> {
+    const args = [...this.sshArgs, remoteCommand];
 
     try {
-      const { stdout, stderr } = await execAsync(fullCommand, {
+      const { stdout, stderr } = await execFileAsync(this.sshExecutable, args, {
         timeout: 30000,
         maxBuffer: 10 * 1024 * 1024,
       });
@@ -125,6 +160,7 @@ export class KvmSshClient {
   }
 
   async waitForState(vmId: string, expectedState: string, timeout: number): Promise<void> {
+    validateVMId(vmId);
     const startTime = Date.now();
     const pollInterval = 2000;
 
@@ -144,6 +180,7 @@ export class KvmSshClient {
   }
 
   async getVMDetail(name: string): Promise<{ maxMem: number; vcpus: number }> {
+    validateVMId(name);
     try {
       const { stdout } = await this.execSSH(`virsh dominfo "${name}"`);
       let maxMem = 0;

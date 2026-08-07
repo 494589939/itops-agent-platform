@@ -390,7 +390,7 @@ export class WorkflowEngine {
    */
   private evaluateExpression(expression: string, context: any): any {
     // 简化实现：变量替换
-    return expression.replace(/\${(\w+)}/g, (match, varName) => {
+    const replaced = expression.replace(/\${(\w+)}/g, (match, varName) => {
       const parts = varName.split('.');
       let result = context;
 
@@ -404,6 +404,20 @@ export class WorkflowEngine {
 
       return String(result);
     });
+
+    // 尝试还原原始类型
+    if (replaced === 'true') return true;
+    if (replaced === 'false') return false;
+    if (replaced === 'null') return null;
+    if (replaced === 'undefined') return undefined;
+    // 尝试解析为 JSON（数组/对象/数字）
+    try {
+      return JSON.parse(replaced);
+    } catch {
+      // 纯数字字符串转数字
+      if (/^-?\d+(\.\d+)?$/.test(replaced)) return Number(replaced);
+      return replaced;
+    }
   }
 
   /**

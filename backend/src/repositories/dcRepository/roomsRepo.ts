@@ -111,10 +111,13 @@ export const roomsRepo = {
   },
 
   deleteAll(): void {
-    db.prepare('DELETE FROM dc_device_lifecycle').run();
-    db.prepare('DELETE FROM dc_rack_slots').run();
-    db.prepare('DELETE FROM dc_pdus').run();
-    db.prepare('DELETE FROM dc_racks').run();
-    db.prepare('DELETE FROM dc_rooms').run();
+    const tx = db.transaction(() => {
+      db.prepare('DELETE FROM dc_device_lifecycle').run();
+      db.prepare('DELETE FROM dc_rack_slots').run();
+      db.prepare('DELETE FROM dc_pdus').run();
+      db.prepare('DELETE FROM dc_racks').run();
+      db.prepare('DELETE FROM dc_rooms').run();
+    });
+    tx();
   },
 };

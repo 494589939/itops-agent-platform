@@ -50,7 +50,8 @@ export const networkDeviceCoreRepo = {
     if (filters.deviceType) { query += ' AND nd.device_type = ?'; params.push(filters.deviceType); }
     if (filters.vendor) { query += ' AND nd.manufacturer = ?'; params.push(filters.vendor); }
     if (filters.status) { query += ' AND nd.status = ?'; params.push(filters.status); }
-    query += ` LIMIT ${filters.limit || 50}`;
+    query += ' LIMIT ?';
+    params.push(Math.min(Number(filters.limit) || 50, 200));
     return db.prepare(query).all(...params) as NetworkDeviceWithCredentialName[];
   },
 

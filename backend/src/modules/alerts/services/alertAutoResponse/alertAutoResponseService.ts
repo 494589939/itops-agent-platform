@@ -86,6 +86,11 @@ class AlertAutoResponseService {
       return;
     }
 
+    if (!this.initialized) {
+      logger.warn('AlertAutoResponse service not initialized, skipping alert', alertId);
+      return;
+    }
+
     this.processingIds.add(alertId);
     const logId = uuidv4();
     const startTime = Date.now();

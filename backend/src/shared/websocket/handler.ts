@@ -143,14 +143,21 @@ export function setupWebSocket(io: SocketIOServer) {
 
         result.shell.on('data', shellDataHandler);
 
-        socket.on('terminal:disconnect', () => {
+        // 使用基于 sessionId 的命名空间事件 + once，避免每次开终端都累积监听器
+        // 旧实现用 socket.on('terminal:disconnect', ...) 永不移除，导致一条断开消息关闭所有终端
+        const disconnectHandler = () => {
           result.shell.removeListener('data', shellDataHandler);
+          socket.off(`terminal:close-session:${result.sessionId}`, closeSessionHandler);
           terminalService.closeTerminalSession(result.sessionId);
-        });
+        };
 
-        socket.on(`terminal:close-session:${result.sessionId}`, () => {
+        const closeSessionHandler = () => {
           result.shell.removeListener('data', shellDataHandler);
-        });
+          socket.off(`terminal:disconnect:${result.sessionId}`, disconnectHandler);
+        };
+
+        socket.once(`terminal:disconnect:${result.sessionId}`, disconnectHandler);
+        socket.once(`terminal:close-session:${result.sessionId}`, closeSessionHandler);
 
         callback({ sessionId: result.sessionId });
       } catch (err) {

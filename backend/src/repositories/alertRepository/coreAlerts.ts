@@ -377,9 +377,15 @@ export function getAarsConfig(): AarsConfig | undefined {
   return db.prepare('SELECT * FROM aars_config LIMIT 1').get() as AarsConfig | undefined;
 }
 
+const AARS_CONFIG_ALLOWED_COLUMNS = new Set([
+  'enabled', 'min_severity', 'auto_execute_enabled', 'approval_timeout_minutes',
+  'max_concurrent', 'ssh_timeout_sec', 'verify_interval_sec', 'notification_channels',
+  'auto_execute_whitelist', 'business_hours',
+]);
+
 /** 动态更新 AARS 配置（WHERE id = 1） */
 export function updateAarsConfig(fields: Partial<AarsConfig>): AarsConfig | undefined {
-  const entries = Object.entries(fields);
+  const entries = Object.entries(fields).filter(([k]) => AARS_CONFIG_ALLOWED_COLUMNS.has(k));
   if (entries.length === 0) return getAarsConfig();
   const sets = entries.map(([k]) => `${k} = @${k}`).join(', ');
   db.prepare(`UPDATE aars_config SET ${sets}, updated_at = datetime('now','localtime') WHERE id = 1`).run(fields);

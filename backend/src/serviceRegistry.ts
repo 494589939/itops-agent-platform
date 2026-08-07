@@ -63,19 +63,11 @@ import { containerLogService } from './modules/containers/services/containerLogS
 import { vmMigrationService } from './modules/containers/services/vmMigrationService';
 import { initTokenBlacklist } from './modules/auth/services/tokenBlacklist';
 import { migrateEncryptionKeys } from './modules/auth/services/encryptionService';
-import { startCircuitBreakerCleanup } from './modules/ai/services/llm/llmService';
+import { startCircuitBreakerCleanup, stopCircuitBreakerCleanup } from './modules/ai/services/llm/llmService';
 import { startDCStatusPush, stopDCStatusPush } from './modules/dc/services/dcStatusService';
-import { startDCEnvironmentPoll } from './modules/dc/services/dcRoomEnvironmentService';
-// 2026-07-21：stop* 函数保留 import 但暂不调（供未来外部调用使用）
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { stopDCEnvironmentPoll } from './modules/dc/services/dcRoomEnvironmentService';
-import { startDcPduSnmpPoll } from './modules/dc/services/dcPduSnmpService';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { stopDcPduSnmpPoll } from './modules/dc/services/dcPduSnmpService';
-import { startAgentExecutionArchive } from './modules/ai/services/agents/agentExecutionArchiver';
-// 2026-07-21：停止函数保留 import 但暂不调
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { stopAgentExecutionArchive } from './modules/ai/services/agents/agentExecutionArchiver';
+import { startDCEnvironmentPoll, stopDCEnvironmentPoll } from './modules/dc/services/dcRoomEnvironmentService';
+import { startDcPduSnmpPoll, stopDcPduSnmpPoll } from './modules/dc/services/dcPduSnmpService';
+import { startAgentExecutionArchive, stopAgentExecutionArchive } from './modules/ai/services/agents/agentExecutionArchiver';
 import { initializeProviders } from './modules/ai/services/providers';
 import { registerAllPlatformTools } from './modules/mcp/services';
 import { initializeMultiAgentSystem } from './modules/ai/services/multiAgent';
@@ -284,9 +276,7 @@ export function registerAllServices(): void {
     },
     [],
     {
-      shutdown: () => {
-        /* stop handled elsewhere */
-      },
+      shutdown: () => snmpPollingService.stop(),
     },
   );
 
@@ -329,9 +319,7 @@ export function registerAllServices(): void {
     },
     ['remediationService'],
     {
-      shutdown: () => {
-        /* stop handled elsewhere */
-      },
+      shutdown: () => alertAutoAnalyzer.stop(),
     },
   );
 
@@ -445,6 +433,9 @@ export function registerAllServices(): void {
       return { name: 'circuitBreaker' };
     },
     [],
+    {
+      shutdown: () => stopCircuitBreakerCleanup(),
+    },
   );
 
   container.register(
@@ -468,7 +459,12 @@ export function registerAllServices(): void {
     },
     [],
     {
-      shutdown: () => stopDCStatusPush(),
+      shutdown: () => {
+        stopDCStatusPush();
+        stopDCEnvironmentPoll();
+        stopDcPduSnmpPoll();
+        stopAgentExecutionArchive();
+      },
     },
   );
 }

@@ -271,14 +271,20 @@ export class HealthService {
 
   private async checkDatabase(): Promise<SystemHealth['database']> {
     const startTime = Date.now();
-    
+
     try {
-      dbHealthRepository.ping();
+      await Promise.race([
+        Promise.resolve(dbHealthRepository.ping()),
+        new Promise((_, reject) => {
+          const timer = setTimeout(() => reject(new Error('DB ping timeout')), HEALTH_CHECK_TIMEOUT);
+          timer.unref?.();
+        }),
+      ]);
       const latency = Date.now() - startTime;
-      
+
       const tableCount = dbHealthRepository.getTableCount();
       const size = this.getDatabaseSize();
-      
+
       return {
         status: latency < HEALTH_CHECK_TIMEOUT ? 'healthy' : 'unhealthy',
         latencyMs: latency,

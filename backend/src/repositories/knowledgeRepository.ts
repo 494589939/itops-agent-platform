@@ -150,8 +150,9 @@ export const knowledgeRepository = {
     if (conditions.length > 0) {
       sql += ' WHERE ' + conditions.join(' AND ');
     }
-    const limit = filters?.limit ?? 20;
-    sql += ` ORDER BY usage_count DESC, created_at DESC LIMIT ${limit}`;
+    const limit = Math.min(Number(filters?.limit) || 20, 200);
+    sql += ' ORDER BY usage_count DESC, created_at DESC LIMIT ?';
+    params.push(limit);
     return db.prepare(sql).all(...params) as KnowledgeRecord[];
   },
 
@@ -168,7 +169,8 @@ export const knowledgeRepository = {
       params.push(pattern, pattern, pattern);
     }
     if (filters.category) { sql += ' AND category = ?'; params.push(filters.category); }
-    sql += ` LIMIT ${filters.limit || 5}`;
+    sql += ' LIMIT ?';
+    params.push(Math.min(Number(filters.limit) || 5, 200));
     return db.prepare(sql).all(...params) as KnowledgeRecord[];
   },
 

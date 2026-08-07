@@ -20,7 +20,8 @@ export const workflowsRepo = {
     let query = 'SELECT id, name, description, status, trigger_type, created_at, updated_at FROM workflows WHERE 1=1';
     const params: unknown[] = [];
     if (filters.status) { query += ' AND status = ?'; params.push(filters.status); }
-    query += ` LIMIT ${filters.limit || 20}`;
+    query += ' LIMIT ?';
+    params.push(Math.min(Number(filters.limit) || 20, 200));
     return db.prepare(query).all(...params) as WorkflowRecord[];
   },
 
@@ -66,16 +67,6 @@ export const workflowsRepo = {
    */
   getAnyTemplateId(): string | undefined {
     const row = db.prepare('SELECT id FROM workflows WHERE is_template = 1 LIMIT 1')
-      .get() as { id: string } | undefined;
-    return row?.id;
-  },
-
-  /**
-   * 按名称关键词模糊匹配模板 id
-   * 对应 presets/initRemediationPolicies.ts W-SELECT-7
-   */
-  findTemplateIdByNameKeywords(pattern: string): string | undefined {
-    const row = db.prepare(`SELECT id FROM workflows WHERE is_template = 1 AND (${pattern}) LIMIT 1`)
       .get() as { id: string } | undefined;
     return row?.id;
   },

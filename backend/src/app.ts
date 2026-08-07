@@ -100,13 +100,13 @@ async function gracefulShutdown(signal: string): Promise<void> {
   // 1. 停止接受新请求
   if (httpServer) {
     logger.info('正在关闭 HTTP 服务器...');
-    httpServer.close();
+    await new Promise<void>(resolve => httpServer?.close(() => resolve()));
   }
 
   // 2. 关闭 WebSocket
   if (io) {
     logger.info('正在关闭 Socket.io...');
-    io.close();
+    await new Promise<void>(resolve => io?.close(() => resolve()));
   }
 
   // 3. 关闭所有服务（逆序）

@@ -21,7 +21,8 @@ export const serversRepo = {
     if (filters.groupId) { query += ' AND group_id = ?'; params.push(filters.groupId); }
     if (filters.status) { query += ' AND status = ?'; params.push(filters.status); }
     if (filters.search) { query += ' AND (name LIKE ? OR hostname LIKE ?)'; params.push(`%${filters.search}%`, `%${filters.search}%`); }
-    query += ` LIMIT ${filters.limit || 50}`;
+    query += ' LIMIT ?';
+    params.push(Math.min(Number(filters.limit) || 50, 200));
     return db.prepare(query).all(...params) as ServerRecord[];
   },
 
@@ -73,7 +74,7 @@ export const serversRepo = {
    */
   findIdHostnameByHostnameFuzzy(likePattern: string, hostname: string): { id: string; hostname: string } | undefined {
     return db.prepare(
-      "SELECT id, hostname FROM servers WHERE hostname LIKE ? OR ? LIKE CONCAT('%', hostname) LIMIT 1"
+      "SELECT id, hostname FROM servers WHERE hostname LIKE ? OR ? LIKE '%' || hostname LIMIT 1"
     ).get(likePattern, hostname) as { id: string; hostname: string } | undefined;
   },
 
