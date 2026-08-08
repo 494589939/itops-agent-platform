@@ -62,10 +62,19 @@ interface SnmpCredential {
   [key: string]: unknown;
 }
 
+/** 兼容解析任务时间：新数据为 ISO UTC；旧数据是 "YYYY-MM-DD HH:MM:SS"(容器 localtime 实为 UTC)，补 Z 按 UTC 解析 */
+function parseJobDate(s: string | undefined): number {
+  if (!s) return NaN;
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) {
+    return new Date(s.replace(' ', 'T') + 'Z').getTime();
+  }
+  return new Date(s).getTime();
+}
+
 /** 根据已扫描进度 + 启动时间估算剩余时间（秒） */
 function estimateEta(job: DiscoveryJob): string | null {
   if (job.status !== 'running' || !job.progress || job.progress >= 100 || !job.started_at) return null;
-  const started = new Date(job.started_at).getTime();
+  const started = parseJobDate(job.started_at);
   if (Number.isNaN(started) || started <= 0) return null;
   const elapsedSec = (Date.now() - started) / 1000;
   if (elapsedSec <= 0) return null;
@@ -107,7 +116,13 @@ export default function NetworkDiscovery() {
   const { data: jobs = [], isLoading: jobsLoading } = useQuery({
     queryKey: ['network-discovery-jobs'],
     queryFn: () => api.get('/network-discovery/jobs').then((r) => r.data || []),
-    refetchInterval: 3000, // 3 秒刷新
+    // 仅当存在运行中/等待中的任务时才 3 秒轮询；全部完成/取消后停止请求，避免 429 限流
+    refetchInterval: (query) => {
+      const list = (query.state.data ?? []) as DiscoveryJob[];
+      return list.some((j) => j.status === 'running' || j.status === 'pending') ? 3000 : false;
+    },
+    // 轮询接口失败不自动重试（下一轮轮询自然补偿），避免 429 重试风暴
+    retry: false,
   });
 
   // 选中的任务的结果
@@ -128,6 +143,8 @@ export default function NetworkDiscovery() {
         })),
     enabled: !!selectedJobId,
     refetchInterval: selectedJob?.status === 'running' ? 3000 : undefined,
+    // 轮询接口失败不自动重试，避免 429 重试风暴
+    retry: false,
   });
 
   const results = resultsData?.data || [];

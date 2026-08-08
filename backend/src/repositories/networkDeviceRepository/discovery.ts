@@ -32,9 +32,10 @@ export const networkDeviceDiscoveryRepo = {
     return db.prepare('SELECT * FROM network_discovery_jobs ORDER BY created_at DESC').all() as NetworkDiscoveryJob[];
   },
 
-  /** 更新扫描任务状态 */
+  /** 更新扫描任务状态（started_at 存 ISO UTC，前端可直接解析，避免时区偏差） */
   updateDiscoveryJobStatus(id: string, status: string): void {
-    db.prepare("UPDATE network_discovery_jobs SET status = ?, started_at = datetime('now','localtime') WHERE id = ?").run(status, id);
+    db.prepare('UPDATE network_discovery_jobs SET status = ?, started_at = ? WHERE id = ?')
+      .run(status, new Date().toISOString(), id);
   },
 
   /** 更新扫描任务进度 */
@@ -43,15 +44,16 @@ export const networkDeviceDiscoveryRepo = {
       .run(progress, scanned, found, id);
   },
 
-  /** 完成/取消扫描任务 */
+  /** 完成/取消扫描任务（completed_at 存 ISO UTC） */
   finishDiscoveryJob(id: string, status: string): void {
-    db.prepare("UPDATE network_discovery_jobs SET status = ?, progress = 100, completed_at = datetime('now','localtime') WHERE id = ?").run(status, id);
+    db.prepare('UPDATE network_discovery_jobs SET status = ?, progress = 100, completed_at = ? WHERE id = ?')
+      .run(status, new Date().toISOString(), id);
   },
 
   /** 取消正在运行的任务 */
   cancelDiscoveryJob(id: string): void {
-    db.prepare("UPDATE network_discovery_jobs SET status = ?, completed_at = datetime('now','localtime') WHERE id = ? AND status = ?")
-      .run('cancelled', id, 'running');
+    db.prepare('UPDATE network_discovery_jobs SET status = ?, completed_at = ? WHERE id = ? AND status = ?')
+      .run('cancelled', new Date().toISOString(), id, 'running');
   },
 
   /** 删除扫描任务 */
