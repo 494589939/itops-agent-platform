@@ -38,14 +38,23 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 /**
+ * 生成 slug：名称转小写连字符；中文/空名时用前缀+随机后缀兜底
+ * （制造商/设备型号的 slug 列为 NOT NULL，用户前端不填时后端自动生成）
+ */
+function autoSlug(text: string, prefix: string): string {
+  const base = (text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return base || `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+}
+
+/**
  * POST /manufacturers — 创建制造商
  */
 router.post('/', requireRole('admin', 'operator'), (req: Request, res: Response) => {
   try {
     const { name, slug, description, logo_url, sort_order } = req.body;
-    if (!name || !slug) return res.status(400).json({ success: false, message: 'name and slug required' });
+    if (!name) return res.status(400).json({ success: false, message: 'name required' });
     const id = crypto.randomUUID();
-    dcCrudService.devices.createManufacturer({ id, name, slug, description, logo_url, sort_order });
+    dcCrudService.devices.createManufacturer({ id, name, slug: slug || autoSlug(name, 'mfg'), description, logo_url, sort_order });
     res.json({ success: true, data: { id } });
   } catch (error: unknown) {
     logger.error('Failed to operate dc manufacturers', error);
@@ -59,7 +68,8 @@ router.post('/', requireRole('admin', 'operator'), (req: Request, res: Response)
 router.put('/:id', requireRole('admin', 'operator'), (req: Request, res: Response) => {
   try {
     const { name, slug, description, logo_url, sort_order } = req.body;
-    dcCrudService.devices.updateManufacturer(req.params.id, { id: req.params.id, name, slug, description, logo_url, sort_order });
+    if (!name) return res.status(400).json({ success: false, message: 'name required' });
+    dcCrudService.devices.updateManufacturer(req.params.id, { id: req.params.id, name, slug: slug || autoSlug(name, 'mfg'), description, logo_url, sort_order });
     res.json({ success: true });
   } catch (error: unknown) {
     logger.error('Failed to operate dc manufacturers', error);

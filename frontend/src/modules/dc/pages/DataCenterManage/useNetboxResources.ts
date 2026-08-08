@@ -1,5 +1,6 @@
 ﻿
 import { message } from '@/lib/antdMessage';
+import { getAxiosErrorMessage } from '@/lib/errorHandler';
 import { useState, useEffect, useCallback } from 'react';
 
 import { Form } from 'antd';
@@ -22,8 +23,6 @@ import type {
   PowerPanelInput,
   PowerFeedInput,
   CableInput,
-  DeviceType,
-  Cable as ApiCable,
 } from '../../api';
 
 /**
@@ -66,18 +65,25 @@ export function useNetboxResources(injectedRooms?: Room[], injectedRacks?: Rack[
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [m, d, pp, pf, c] = await Promise.all([
+      // 使用 allSettled：单个接口失败不影响其余 4 类资源加载
+      // （原来 Promise.all 一个失败会丢弃全部结果，导致 5 个 tab 同时空白）
+      const [m, d, pp, pf, c] = await Promise.allSettled([
         dcApi.listManufacturers(),
         dcApi.listDeviceTypes(),
         dcApi.listPowerPanels(),
         dcApi.listPowerFeeds(),
         dcApi.listCables(),
       ]);
-      setManufacturers(m);
-      setDeviceTypes(d as unknown as DeviceTypeInfo[]);
-      setPowerPanels(pp);
-      setPowerFeeds(pf);
-      setCables(c as unknown as UiCable[]);
+      // 统计失败数：部分失败时提示，避免全部静默显示空表
+      const rejected = [m, d, pp, pf, c].filter(r => r.status === 'rejected').length;
+      if (rejected > 0) {
+        message.warning(`${rejected} 类资源加载失败，已显示其余可用数据`);
+      }
+      setManufacturers(m.status === 'fulfilled' ? m.value : []);
+      setDeviceTypes(d.status === 'fulfilled' ? (d.value as unknown as DeviceTypeInfo[]) : []);
+      setPowerPanels(pp.status === 'fulfilled' ? pp.value : []);
+      setPowerFeeds(pf.status === 'fulfilled' ? pf.value : []);
+      setCables(c.status === 'fulfilled' ? (c.value as unknown as UiCable[]) : []);
     } catch (err: unknown) {
       message.error((err as Error).message || '加载资源失败');
     } finally {
@@ -89,17 +95,23 @@ export function useNetboxResources(injectedRooms?: Room[], injectedRacks?: Rack[
 
   // ── Manufacturer CRUD ──
   const saveMfg = useCallback(async () => {
-    const values = await mfgForm.validateFields();
-    if (editingMfg) {
-      await dcApi.updateManufacturer(editingMfg.id, values);
-    } else {
-      await dcApi.createManufacturer(values);
+    try {
+      const values = await mfgForm.validateFields();
+      if (editingMfg) {
+        await dcApi.updateManufacturer(editingMfg.id, values);
+      } else {
+        await dcApi.createManufacturer(values);
+      }
+      message.success('保存成功');
+      setMfgModalOpen(false);
+      setEditingMfg(null);
+      mfgForm.resetFields();
+      load();
+    } catch (err: unknown) {
+      // 校验失败与后端错误分开提示，避免"点了保存没反应"
+      const isValidation = typeof err === 'object' && err !== null && 'errorFields' in err;
+      message.error(isValidation ? '请检查表单必填项（红框标记）' : getAxiosErrorMessage(err, '保存失败'));
     }
-    message.success('保存成功');
-    setMfgModalOpen(false);
-    setEditingMfg(null);
-    mfgForm.resetFields();
-    load();
   }, [mfgForm, editingMfg, load]);
 
   const deleteMfg = useCallback(async (id: string) => {
@@ -110,17 +122,22 @@ export function useNetboxResources(injectedRooms?: Room[], injectedRacks?: Rack[
 
   // ── DeviceType CRUD ──
   const saveDt = useCallback(async () => {
-    const values = await dtForm.validateFields();
-    if (editingDt) {
-      await dcApi.updateDeviceType(editingDt.id, values);
-    } else {
-      await dcApi.createDeviceType(values);
+    try {
+      const values = await dtForm.validateFields();
+      if (editingDt) {
+        await dcApi.updateDeviceType(editingDt.id, values);
+      } else {
+        await dcApi.createDeviceType(values);
+      }
+      message.success('保存成功');
+      setDtModalOpen(false);
+      setEditingDt(null);
+      dtForm.resetFields();
+      load();
+    } catch (err: unknown) {
+      const isValidation = typeof err === 'object' && err !== null && 'errorFields' in err;
+      message.error(isValidation ? '请检查表单必填项（红框标记）' : getAxiosErrorMessage(err, '保存失败'));
     }
-    message.success('保存成功');
-    setDtModalOpen(false);
-    setEditingDt(null);
-    dtForm.resetFields();
-    load();
   }, [dtForm, editingDt, load]);
 
   const deleteDt = useCallback(async (id: string) => {
@@ -131,17 +148,22 @@ export function useNetboxResources(injectedRooms?: Room[], injectedRacks?: Rack[
 
   // ── PowerPanel CRUD ──
   const savePp = useCallback(async () => {
-    const values = await ppForm.validateFields();
-    if (editingPp) {
-      await dcApi.updatePowerPanel(editingPp.id, values);
-    } else {
-      await dcApi.createPowerPanel(values);
+    try {
+      const values = await ppForm.validateFields();
+      if (editingPp) {
+        await dcApi.updatePowerPanel(editingPp.id, values);
+      } else {
+        await dcApi.createPowerPanel(values);
+      }
+      message.success('保存成功');
+      setPpModalOpen(false);
+      setEditingPp(null);
+      ppForm.resetFields();
+      load();
+    } catch (err: unknown) {
+      const isValidation = typeof err === 'object' && err !== null && 'errorFields' in err;
+      message.error(isValidation ? '请检查表单必填项（红框标记）' : getAxiosErrorMessage(err, '保存失败'));
     }
-    message.success('保存成功');
-    setPpModalOpen(false);
-    setEditingPp(null);
-    ppForm.resetFields();
-    load();
   }, [ppForm, editingPp, load]);
 
   const deletePp = useCallback(async (id: string) => {
@@ -152,17 +174,22 @@ export function useNetboxResources(injectedRooms?: Room[], injectedRacks?: Rack[
 
   // ── PowerFeed CRUD ──
   const savePf = useCallback(async () => {
-    const values = await pfForm.validateFields();
-    if (editingPf) {
-      await dcApi.updatePowerFeed(editingPf.id, values);
-    } else {
-      await dcApi.createPowerFeed(values);
+    try {
+      const values = await pfForm.validateFields();
+      if (editingPf) {
+        await dcApi.updatePowerFeed(editingPf.id, values);
+      } else {
+        await dcApi.createPowerFeed(values);
+      }
+      message.success('保存成功');
+      setPfModalOpen(false);
+      setEditingPf(null);
+      pfForm.resetFields();
+      load();
+    } catch (err: unknown) {
+      const isValidation = typeof err === 'object' && err !== null && 'errorFields' in err;
+      message.error(isValidation ? '请检查表单必填项（红框标记）' : getAxiosErrorMessage(err, '保存失败'));
     }
-    message.success('保存成功');
-    setPfModalOpen(false);
-    setEditingPf(null);
-    pfForm.resetFields();
-    load();
   }, [pfForm, editingPf, load]);
 
   const deletePf = useCallback(async (id: string) => {
@@ -173,17 +200,22 @@ export function useNetboxResources(injectedRooms?: Room[], injectedRacks?: Rack[
 
   // ── Cable CRUD ──
   const saveCable = useCallback(async () => {
-    const values = await cableForm.validateFields();
-    if (editingCable) {
-      await dcApi.updateCable(editingCable.id, values);
-    } else {
-      await dcApi.createCable(values);
+    try {
+      const values = await cableForm.validateFields();
+      if (editingCable) {
+        await dcApi.updateCable(editingCable.id, values);
+      } else {
+        await dcApi.createCable(values);
+      }
+      message.success('保存成功');
+      setCableModalOpen(false);
+      setEditingCable(null);
+      cableForm.resetFields();
+      load();
+    } catch (err: unknown) {
+      const isValidation = typeof err === 'object' && err !== null && 'errorFields' in err;
+      message.error(isValidation ? '请检查表单必填项（红框标记）' : getAxiosErrorMessage(err, '保存失败'));
     }
-    message.success('保存成功');
-    setCableModalOpen(false);
-    setEditingCable(null);
-    cableForm.resetFields();
-    load();
   }, [cableForm, editingCable, load]);
 
   const deleteCable = useCallback(async (id: string) => {

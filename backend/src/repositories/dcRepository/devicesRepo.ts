@@ -62,7 +62,13 @@ export const devicesRepo = {
 
   /** 按 sort_order, name 排序（manufacturers.ts 用） */
   listManufacturersOrdered(): DeviceManufacturer[] {
-    return db.prepare('SELECT * FROM device_manufacturers ORDER BY sort_order, name').all() as DeviceManufacturer[];
+    // 列表同时统计每个制造商的设备型号数量（前端 manufacturers tab 展示 type_count）
+    return db.prepare(`
+      SELECT dm.*,
+        (SELECT COUNT(*) FROM device_types dt WHERE dt.manufacturer_id = dm.id) AS type_count
+      FROM device_manufacturers dm
+      ORDER BY dm.sort_order, dm.name
+    `).all() as DeviceManufacturer[];
   },
 
   getManufacturerById(id: string): DeviceManufacturer | undefined {
@@ -104,7 +110,8 @@ export const devicesRepo = {
   listDeviceTypesWithManufacturer(filters: { manufacturerId?: string } = {}): DeviceType[] {
     const params: unknown[] = [];
     let query = `
-      SELECT dt.*, dm.name as manufacturer_name, dm.slug as manufacturer_slug
+      SELECT dt.*, dm.name as manufacturer_name, dm.slug as manufacturer_slug,
+        (SELECT COUNT(*) FROM dc_rack_slots rs WHERE rs.device_type_id = dt.id) AS instance_count
       FROM device_types dt
       JOIN device_manufacturers dm ON dm.id = dt.manufacturer_id
     `;
@@ -178,13 +185,19 @@ export const devicesRepo = {
 
   /** 生命周期列表（带过滤 + 分页，lifecycle.ts GET /） */
   listLifecycleFiltered(filters: LifecycleListFilters = {}): DcDeviceLifecycle[] {
-    let query = 'SELECT * FROM dc_device_lifecycle';
+    // LEFT JOIN 出来源/目标机柜名称（前端 lifecycle tab 展示 from/to 位置）
+    let query = `
+      SELECT lc.*, r1.name AS from_rack_name, r2.name AS to_rack_name
+      FROM dc_device_lifecycle lc
+      LEFT JOIN dc_racks r1 ON r1.id = lc.from_rack_id
+      LEFT JOIN dc_racks r2 ON r2.id = lc.to_rack_id
+    `;
     const params: unknown[] = [];
     if (filters.action) {
-      query += ' WHERE action = ?';
+      query += ' WHERE lc.action = ?';
       params.push(filters.action);
     }
-    query += ' ORDER BY created_at DESC LIMIT ?';
+    query += ' ORDER BY lc.created_at DESC LIMIT ?';
     params.push(filters.limit ?? 500);
     return db.prepare(query).all(...params) as DcDeviceLifecycle[];
   },

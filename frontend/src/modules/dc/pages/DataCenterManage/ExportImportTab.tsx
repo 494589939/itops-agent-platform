@@ -25,7 +25,7 @@ export default function ExportImportTab({ dc }: Props) {
           {dc.exportData ? (
             <>
               <p className="text-xs text-text-tertiary mb-3">
-                包含 {dc.exportData.summary?.rooms || 0} 个机房, {dc.exportData.summary?.racks || 0} 个机柜, {dc.exportData.summary?.devices || 0} 个设备
+                包含 {dc.exportData.summary?.rooms || 0} 个机房, {dc.exportData.summary?.racks || 0} 个机柜, {dc.exportData.summary?.slots || 0} 个U位设备
               </p>
               <div className="flex gap-2">
                 <Button icon={<Download size={14} />} onClick={dc.handleExportDownload}>下载 JSON 文件</Button>

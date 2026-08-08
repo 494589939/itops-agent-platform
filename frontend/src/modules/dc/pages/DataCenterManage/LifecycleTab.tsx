@@ -21,8 +21,8 @@ export default function LifecycleTab({ dc }: Props) {
       )
     },
     { title: '设备类型', dataIndex: 'device_type', key: 'device_type', render: (v: string) => <Tag>{v}</Tag> },
-    { title: '来源位置', dataIndex: 'from_location', key: 'from_location', render: (v: string) => v !== 'N/A' ? v : '-' },
-    { title: '目标位置', dataIndex: 'to_location', key: 'to_location', render: (v: string) => v !== 'N/A' ? v : '-' },
+    { title: '来源位置', dataIndex: 'from_rack_name', key: 'from_rack_name', render: (_: string, rec: LifecycleRecord) => rec.from_rack_name || rec.from_rack_id || '-' },
+    { title: '目标位置', dataIndex: 'to_rack_name', key: 'to_rack_name', render: (_: string, rec: LifecycleRecord) => rec.to_rack_name || rec.to_rack_id || '-' },
     { title: '操作人', dataIndex: 'performed_by', key: 'performed_by' },
     { title: '备注', dataIndex: 'notes', key: 'notes', render: (v: string) => v || '-' },
   ];

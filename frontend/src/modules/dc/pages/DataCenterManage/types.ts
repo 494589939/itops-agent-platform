@@ -44,6 +44,16 @@ export interface Room {
   depth_m?: number;
   description?: string;
   sort_order?: number;
+  /** 环境数据（℃） */
+  current_temperature?: number | null;
+  /** 环境数据（%） */
+  current_humidity?: number | null;
+  /** PUE */
+  pue?: number | null;
+  /** 总功耗（kW） */
+  total_power_kw?: number | null;
+  /** 1=手动填写环境数据（停止模拟），0=自动模拟 */
+  env_manual?: number;
 }
 
 export interface Rack {
@@ -189,8 +199,10 @@ export interface LifecycleRecord {
   created_at?: string;
   action?: string;
   device_type?: string;
-  from_location?: string;
-  to_location?: string;
+  from_rack_id?: string;
+  to_rack_id?: string;
+  from_rack_name?: string;
+  to_rack_name?: string;
   performed_by?: string;
   notes?: string;
 }

@@ -49,18 +49,27 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 /**
+ * 生成 slug：型号转小写连字符；中文/空名时用前缀+随机后缀兜底
+ * （device_types.slug 列为 NOT NULL，用户前端不填时后端自动生成）
+ */
+function autoSlug(text: string, prefix: string): string {
+  const base = (text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return base || `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+}
+
+/**
  * POST /device-types — 创建设备型号
  */
 router.post('/', requireRole('admin', 'operator'), (req: Request, res: Response) => {
   try {
     const { manufacturer_id, model, slug, part_number, u_height, is_full_depth,
             subdevice_role, airflow, weight_kg, max_power_w, description } = req.body;
-    if (!manufacturer_id || !model || !slug) {
-      return res.status(400).json({ success: false, message: 'manufacturer_id, model, slug required' });
+    if (!manufacturer_id || !model) {
+      return res.status(400).json({ success: false, message: 'manufacturer_id, model required' });
     }
     const id = crypto.randomUUID();
     dcCrudService.devices.createDeviceType({
-      id, manufacturer_id, model, slug, part_number, u_height, is_full_depth,
+      id, manufacturer_id, model, slug: slug || autoSlug(model, 'dt'), part_number, u_height, is_full_depth,
       subdevice_role, airflow, weight_kg, max_power_w, description,
     });
     res.json({ success: true, data: { id } });
@@ -77,8 +86,11 @@ router.put('/:id', requireRole('admin', 'operator'), (req: Request, res: Respons
   try {
     const { manufacturer_id, model, slug, part_number, u_height, is_full_depth,
             subdevice_role, airflow, weight_kg, max_power_w, description } = req.body;
+    if (!manufacturer_id || !model) {
+      return res.status(400).json({ success: false, message: 'manufacturer_id, model required' });
+    }
     dcCrudService.devices.updateDeviceType(req.params.id, {
-      id: req.params.id, manufacturer_id, model, slug, part_number, u_height, is_full_depth,
+      id: req.params.id, manufacturer_id, model, slug: slug || autoSlug(model, 'dt'), part_number, u_height, is_full_depth,
       subdevice_role, airflow, weight_kg, max_power_w, description,
     });
     res.json({ success: true });

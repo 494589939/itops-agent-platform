@@ -63,7 +63,12 @@ export default function PDUManagement({ dc }: Props) {
             </Select>
           </Form.Item>
           <Form.Item name="status" label="状态" initialValue="active">
-            <Select><Select.Option value="active">正常运行</Select.Option><Select.Option value="warning">告警</Select.Option><Select.Option value="error">故障</Select.Option></Select>
+            <Select>
+              <Select.Option value="active">正常运行</Select.Option>
+              <Select.Option value="inactive">停用</Select.Option>
+              <Select.Option value="fault">故障</Select.Option>
+              <Select.Option value="maintenance">维护中</Select.Option>
+            </Select>
           </Form.Item>
           <Space className="w-full" style={{ display: 'flex' }}>
             <Form.Item name="power_capacity_w" label="额定功率(W)"><InputNumber min={0} step={100} className="w-full" /></Form.Item>
