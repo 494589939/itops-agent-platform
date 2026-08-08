@@ -7,27 +7,38 @@
 # Website: https://www.zjzwfw.cloud/ITOpsAgentinfo
 # ============================================================
 
+# ============================================================
+# ITOps Agent Platform - Docker Compose (Production 最终版)
+# ============================================================
+# - 代码已预编译（TypeScript tsc + Vite build，运行时无即时编译开销）
+# - 数据 100% 持久化到命名 volume：容器销毁/重建不会丢失 DB/上传/备份/JWT secret
+# - 如需局域网访问：把 ports 中 "127.0.0.1:xxx:yyy" 去掉 "127.0.0.1:" 前缀
+# ============================================================
+
 services:
   backend:
-    # For local build
+    # For local build from final source (recommended)
     build:
       context: .
       dockerfile: docker/Dockerfile.backend
     # For using pre-built images from registry:
     # image: registry.cn-hangzhou.aliyuncs.com/huluwa666/tsq-images-hub:IT_Onlin-ITOps-backend-latest
+    image: itops-backend:prod
     container_name: itops-backend
     networks:
       - itops-network
     ports:
-      - "3001:3001"
+      # 仅绑定 loopback，防止公网直连。如需局域网访问，去掉 127.0.0.1:
+      - "127.0.0.1:3001:3001"
     environment:
       - NODE_ENV=production
       - PORT=3001
       - HOST=0.0.0.0
       - DATABASE_PATH=/app/data/app.db
+      - UPLOAD_DIR=/app/data/uploads
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      # JWT_SECRET 可选 — 不设置则由 backend 自动生成并持久化到 /app/data/.jwt-secret
-      # 重启不会使已有 token 失效。如需自定义，可通过环境变量覆盖。
+      # JWT_SECRET 持久化在 volume(/app/data/.jwt-secret)，空值由后端自动生成并落盘，
+      # 容器重建不会使已有登录token失效。如需固定值，可以设置环境变量覆盖。
       - JWT_SECRET=${JWT_SECRET:-}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
       - DOUBAO_API_KEY=${DOUBAO_API_KEY:-}
@@ -50,8 +61,17 @@ services:
       - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:80,http://localhost:3000,http://localhost:8080,http://itops-frontend,http://frontend}
     volumes:
+      # ============================================================
+      # ✅ 数据持久化（全部挂载到命名 volume，容器 rm/重建数据不丢失）
+      # ============================================================
+      # ①  SQLite 数据库 (app.db)
+      # ②  上传文件 (uploads/)
+      # ③  JWT 自动生成的 secret (.jwt-secret)
       - app-data:/app/data
+      # ④  系统配置备份/数据库备份
       - app-backups:/app/backups
+      # Docker socket (仅当需要在平台内管理 Docker 容器时需要；
+      #  生产若不需要此功能可注释掉下一行以消除宿主机 root 风险)
       - /var/run/docker.sock:/var/run/docker.sock
     # Resource limits
     deploy:
@@ -62,14 +82,22 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
+    # ⚠️ 网络设备发现模块需要 ping (ICMP) 能力
+    #   Linux 容器内非 root 用户运行 ping 需要 CAP_NET_RAW 权限
+    #   不加这个 cap，ping 会直接失败（虽然有 TCP 端口探测兜底，但 ping 更快更准）
+    cap_add:
+      - NET_RAW
+    # 允许容器通过 host.docker.internal 访问宿主机(Linux 上映射到宿主机网关;Windows/Mac Docker Desktop 亦兼容)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
-    # Log driver with size limits
+      start_period: 60s
+    # Log driver with size limits (防止无限增长占满磁盘)
     logging:
       driver: json-file
       options:
@@ -77,17 +105,20 @@ services:
         max-file: "5"
 
   frontend:
-    # For local build
+    # For local build from final source (recommended)
     build:
       context: .
       dockerfile: docker/Dockerfile.frontend
     # For using pre-built images from registry:
     # image: registry.cn-hangzhou.aliyuncs.com/huluwa666/tsq-images-hub:IT_Onlin-ITOps-frontend-latest
+    image: itops-frontend:prod
     container_name: itops-frontend
     networks:
       - itops-network
     ports:
-      - "8080:80"
+      # 浏览器访问入口：http://localhost:8080
+      # 如需公网/局域网访问，去掉 "127.0.0.1:" 前缀
+      - "127.0.0.1:8080:80"
     depends_on:
       backend:
         condition: service_healthy
@@ -106,7 +137,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 20s
     # Log driver with size limits
     logging:
       driver: json-file
@@ -119,7 +150,15 @@ networks:
     driver: bridge
 
 volumes:
+  # ============================================================
+  # ✅ 命名 volume —— 永久数据盘 (只要不主动 docker volume rm 就不会丢)
+  #   docker compose down / 容器 rm -f / docker compose up --force-recreate
+  #   都不会删除里面的数据。
+  #   查看物理位置: docker volume inspect itops-agent-platform-main_app-data
+  # ============================================================
   app-data:
+    name: itops-app-data
     driver: local
   app-backups:
+    name: itops-app-backups
     driver: local

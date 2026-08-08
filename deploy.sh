@@ -221,6 +221,12 @@ services:
       - DATABASE_PATH=/app/data/app.db
       - JWT_SECRET=${JWT_SECRET}
       - ALLOWED_ORIGINS=http://localhost:8080
+    # 网络设备发现需要 ping (ICMP) 能力:容器内非 root 用户(appuser UID 1001)运行 ping 需 CAP_NET_RAW
+    cap_add:
+      - NET_RAW
+    # 允许容器通过 host.docker.internal 访问宿主机(Linux 上映射到宿主机网关;Windows/Mac Docker Desktop 亦兼容)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - app-data:/app/data
       - app-backups:/app/backups

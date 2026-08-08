@@ -5,38 +5,49 @@
 # ============================================================
 # Stage 1: Builder
 # ============================================================
-FROM node:20.19.5-slim AS builder
+# Use bookworm-slim explicit tag (matches local cache) — avoids re-checking remote registry for :slim alias
+FROM node:20.19.5-bookworm-slim AS builder
 
-# Use Aliyun Debian mirror for faster and more reliable apt access in China
-# Note: Must use HTTP (not HTTPS) because node:20-slim lacks ca-certificates
-RUN sed -i 's|http://deb.debian.org/debian|http://mirrors.aliyun.com/debian|g; s|http://security.debian.org/debian-security|http://mirrors.aliyun.com/debian-security|g' /etc/apt/sources.list.d/debian.sources
+# Use Aliyun Debian mirror for main packages, USTC for security (Aliyun debian-security intermittently returns HTTP 502)
+# Note: Must use HTTP (not HTTPS) because node:20-slim lacks ca-certificates at this layer
+RUN sed -i 's|http://deb.debian.org/debian|http://mirrors.aliyun.com/debian|g; s|http://security.debian.org/debian-security|http://mirrors.ustc.edu.cn/debian-security|g' /etc/apt/sources.list.d/debian.sources
 
 WORKDIR /app
 
 # Install build dependencies for native modules (better-sqlite3)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update --allow-releaseinfo-change && apt-get install -y --no-install-recommends \
     python3 \
     make \
     g++ \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package files first for better layer caching
 COPY backend/package.json backend/package-lock.json ./
 
-# Install all dependencies (including devDependencies for tsx) and build native modules
-RUN npm ci
+# Install all dependencies (including devDependencies for TypeScript compiler) and build native modules
+# Use Aliyun npm mirror for faster installs in China
+RUN npm config set registry https://registry.npmmirror.com \
+    && npm ci
 
 # Copy source code
 COPY backend/ ./
 
 # ============================================================
+# Compile TypeScript to JavaScript (final dist output dir ./dist as per tsconfig.json outDir "./dist")
+# tsc does not copy non-TS assets (fonts, binaries, etc.) so we copy the assets directory explicitly.
+# ============================================================
+RUN npx tsc \
+    && cp -r src/assets dist/assets 2>/dev/null || true
+
+# ============================================================
 # Stage 2: Production
 # ============================================================
-FROM node:20.19.5-slim
+FROM node:20.19.5-bookworm-slim
 
-# Use Aliyun Debian mirror for faster and more reliable apt access in China
-# Note: Must use HTTP (not HTTPS) because node:20-slim lacks ca-certificates
-RUN sed -i 's|http://deb.debian.org/debian|http://mirrors.aliyun.com/debian|g; s|http://security.debian.org/debian-security|http://mirrors.aliyun.com/debian-security|g' /etc/apt/sources.list.d/debian.sources
+# Use Aliyun Debian mirror for main packages, USTC for security (Aliyun debian-security intermittently returns HTTP 502)
+# Note: Must use HTTP (not HTTPS) because node:20-slim lacks ca-certificates at this layer
+RUN sed -i 's|http://deb.debian.org/debian|http://mirrors.aliyun.com/debian|g; s|http://security.debian.org/debian-security|http://mirrors.ustc.edu.cn/debian-security|g' /etc/apt/sources.list.d/debian.sources
 
 # Labels for public registry (replace with your actual info)
 LABEL maintainer="谭策 <huawei_network@foxmail.com>" \
@@ -56,11 +67,13 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0
 
 # Install runtime dependencies (SQLite library, Python for dbskiter, gosu for privilege dropping)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# iputils-ping: 网络设备发现模块需要 ping 命令（node:slim 默认不含）
+RUN apt-get update --allow-releaseinfo-change && apt-get install -y --no-install-recommends \
     libsqlite3-0 \
     python3 \
     python3-pip \
     gosu \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装 dbskiter（数据库运维 Agent 依赖），构建时失败不阻塞镜像构建
@@ -71,8 +84,8 @@ RUN python3 -m pip install dbskiter --break-system-packages || true
 # Copy node_modules from builder (already compiled with native modules)
 COPY --from=builder /app/node_modules ./node_modules
 
-# Copy source code from builder
-COPY --from=builder /app/src ./src
+# Copy COMPILED JavaScript output (not TypeScript source) - final dist build
+COPY --from=builder /app/dist ./dist
 
 # Copy package.json for reference
 COPY backend/package.json ./
@@ -101,5 +114,10 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 # Use entrypoint script for proper volume permission handling
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-# Start the application using tsx (TypeScript runtime, no pre-compilation needed)
-CMD ["npx", "tsx", "src/app.ts"]
+# ============================================================
+# PRODUCTION: Run with compiled JS (no runtime compilation!)
+# - Much faster startup
+# - No TypeScript runtime memory overhead
+# - Consistent with "tsc build + node" standard production pattern
+# ============================================================
+CMD ["node", "dist/app.js"]
