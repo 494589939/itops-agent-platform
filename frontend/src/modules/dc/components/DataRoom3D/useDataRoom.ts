@@ -109,7 +109,7 @@ export default function useDataRoom(): UseDataRoomReturn {
         for (const s of slotsData) {
           if (!slotsByRack[s.rack_id]) slotsByRack[s.rack_id] = [];
           slotsByRack[s.rack_id].push({
-            id: s.slot_id,
+            id: s.slot_id || String(s.start_u),
             startU: s.start_u,
             endU: s.end_u,
             deviceName: s.device_name || s.device_id || '',
@@ -227,7 +227,7 @@ export default function useDataRoom(): UseDataRoomReturn {
       const { data } = await api.get(`/dc/slots/${rackId}`);
       const slots = (data || []) as RawSlotItem[];
       setRackSlots(slots.map((s: RawSlotItem) => ({
-        id: s.slot_id,
+        id: s.slot_id || String(s.start_u),
         startU: s.start_u,
         endU: s.end_u,
         deviceName: s.device_name || s.device_id || '',

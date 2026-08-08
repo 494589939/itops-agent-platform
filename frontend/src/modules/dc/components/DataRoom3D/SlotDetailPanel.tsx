@@ -3,6 +3,7 @@ import type { Rack3D, SlotInfo } from './types';
 interface Props {
   rack: Rack3D;
   slots: SlotInfo[];
+  highlightSlotId?: string | null;
   onClose: () => void;
 }
 
@@ -21,7 +22,7 @@ const statusColors: Record<string, string> = {
   unknown: 'text-slate-500',
 };
 
-export default function SlotDetailPanel({ rack, slots, onClose }: Props) {
+export default function SlotDetailPanel({ rack, slots, highlightSlotId, onClose }: Props) {
   const usagePercent = rack.totalU > 0 ? Math.round((rack.usedU / rack.totalU) * 100) : 0;
 
   return (
@@ -63,10 +64,15 @@ export default function SlotDetailPanel({ rack, slots, onClose }: Props) {
             {slots.map((slot, i) => {
               const typeColor = typeColors[slot.deviceType] || 'bg-slate-500/20 text-slate-300 border-slate-500/30';
               const statusColor = statusColors[slot.deviceStatus || 'unknown'] || 'text-slate-500';
+              const highlighted = !!highlightSlotId && slot.id === highlightSlotId;
               return (
                 <div
                   key={slot.id || i}
-                  className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2 border border-transparent hover:border-cyan-500/20 transition-colors"
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2 border transition-colors ${
+                    highlighted
+                      ? 'bg-cyan-500/15 border-cyan-400/60 shadow-[0_0_12px_rgba(0,212,255,0.25)]'
+                      : 'bg-white/5 border-transparent hover:border-cyan-500/20'
+                  }`}
                 >
                   {/* U 位标签 */}
                   <span className="text-[10px] text-slate-600 font-mono w-12 shrink-0">

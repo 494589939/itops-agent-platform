@@ -25,6 +25,7 @@ export default function DataRoom3D() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredRackId, setHoveredRackId] = useState<string | null>(null);
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [timeStr, setTimeStr] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
 
@@ -60,12 +61,30 @@ export default function DataRoom3D() {
   }, [racks, searchQuery]);
 
   const handleRackClick = useCallback((rackId: string) => {
+    // 点击场景空白处（''）：取消选中并关闭面板，相机回到当前视图
+    if (!rackId) {
+      setSelectedRack(null);
+      setSelectedSlotId(null);
+      setSlotDetailOpen(false);
+      return;
+    }
     const rack = racks.find(r => r.id === rackId);
     if (rack) {
       setSelectedRack(rack);
+      setSelectedSlotId(null); // 点机柜本体，清除设备高亮
       setSlotDetailOpen(true);
       fetchRackSlots(rackId);
     }
+  }, [racks, setSelectedRack, setSlotDetailOpen, fetchRackSlots]);
+
+  // 点击 3D 中的 U 位设备：打开机柜设备清单并高亮对应设备
+  const handleSlotClick = useCallback((rackId: string, slotId: string) => {
+    const rack = racks.find(r => r.id === rackId);
+    if (!rack) return;
+    setSelectedRack(rack);
+    setSelectedSlotId(slotId);
+    setSlotDetailOpen(true);
+    fetchRackSlots(rackId);
   }, [racks, setSelectedRack, setSlotDetailOpen, fetchRackSlots]);
 
   const handleHoverChange = useCallback((rackId: string | null) => {
@@ -125,7 +144,9 @@ export default function DataRoom3D() {
         <Scene
           racks={filteredRacks}
           onRackClick={handleRackClick}
+          onSlotClick={handleSlotClick}
           selectedRackId={selectedRack?.id || null}
+          selectedSlotId={selectedSlotId}
           hoveredRackId={hoveredRackId}
           onHoverChange={handleHoverChange}
           heatmapData={heatmapData}
@@ -151,7 +172,8 @@ export default function DataRoom3D() {
         <SlotDetailPanel
           rack={selectedRack}
           slots={rackSlots}
-          onClose={() => { setSlotDetailOpen(false); setSelectedRack(null); }}
+          highlightSlotId={selectedSlotId}
+          onClose={() => { setSlotDetailOpen(false); setSelectedRack(null); setSelectedSlotId(null); }}
         />
       )}
 
