@@ -124,24 +124,25 @@ export function useAIModels() {
     },
     onSuccess: (data, id) => {
       setTestingModel(null);
-      // aiApi.testModel 返回完整 axios 响应（含 success / data 字段）
-      const payload = data as { success?: boolean; data?: { message?: string } };
+      // axios 拦截器已解包 response.data.data，payload 实际为 { status, latency_ms, message }
+      const payload = data as { status?: string; message?: string; latency_ms?: number };
+      const ok = payload?.status === 'success';
       setTestResults(prev => ({
         ...prev,
         [id]: {
-          success: !!payload?.success,
-          message: payload?.data?.message || ''
+          success: ok,
+          message: payload?.message || (ok ? '连接成功' : '连接失败')
         }
       }));
       queryClient.invalidateQueries({ queryKey: ['aiModels'] });
     },
-    onError: (_err, id) => {
+    onError: (err, id) => {
       setTestingModel(null);
       setTestResults(prev => ({
         ...prev,
         [id]: {
           success: false,
-          message: '测试失败'
+          message: getAxiosErrorMessage(err, '测试失败')
         }
       }));
     }

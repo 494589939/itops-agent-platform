@@ -19,6 +19,15 @@ type ToggleMutation = UseMutationResult<unknown, unknown, { id: string; enabled:
 type DefaultMutation = UseMutationResult<unknown, unknown, string, unknown>;
 type DeleteMutation = UseMutationResult<unknown, unknown, string, unknown>;
 
+/** 兼容解析模型时间：新数据为 ISO UTC；旧数据是 "YYYY-MM-DD HH:MM:SS"(容器 localtime 实为 UTC)，补 Z 按 UTC 解析 */
+function parseModelDate(s?: string): Date {
+  if (!s) return new Date(NaN);
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) {
+    return new Date(s.replace(' ', 'T') + 'Z');
+  }
+  return new Date(s);
+}
+
 interface ModelListProps {
   models: AIModel[];
   testResults: Record<string, { success: boolean; message: string }>;
@@ -108,7 +117,7 @@ export function ModelList({
               </div>
               {model.last_test_time && (
                 <div className="text-xs text-text-tertiary mt-1">
-                  最后测试: {new Date(model.last_test_time).toLocaleString()} - {model.last_test_status === 'success' ? '成功' : '失败'}
+                  最后测试: {parseModelDate(model.last_test_time).toLocaleString()} - {model.last_test_status === 'success' ? '成功' : '失败'}
                 </div>
               )}
             </div>

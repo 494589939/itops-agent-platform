@@ -156,8 +156,8 @@ export const aiModelRepository = {
   updateTestStatus(id: string, status: 'success' | 'failed'): void {
     db.prepare(`
       UPDATE ai_models
-      SET last_test_status = ?, last_test_time = datetime('now','localtime'), updated_at = datetime('now','localtime')
+      SET last_test_status = ?, last_test_time = ?, updated_at = datetime('now','localtime')
       WHERE id = ?
-    `).run(status, id);
+    `).run(status, new Date().toISOString(), id);
   },
 };
