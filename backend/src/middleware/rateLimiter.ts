@@ -26,6 +26,9 @@ const rateLimitConfig: RateLimitConfig = {
   '/api/v1/copilot': { windowMs: 60 * 1000, max: 30 },
   '/api/v1/settings/api-keys': { windowMs: 60 * 1000, max: 10 },
   '/api/v1/webhooks': { windowMs: 1000, max: 10 },
+  // 网络发现接口由前端 3 秒轮询驱动，放宽到 300 次/分钟（单标签页约 20 次/分钟，
+  // 多标签页/多客户端共享同一来源 IP 时也能容纳，不会误伤轮询）
+  '/api/v1/network-discovery': { windowMs: 60 * 1000, max: 300 },
 };
 
 const ipWhitelist: readonly string[] = env.WEBHOOK_IP_WHITELIST

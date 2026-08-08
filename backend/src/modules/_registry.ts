@@ -108,18 +108,19 @@ export function registerAllModules(app: Express): void {
   // 3. 添加密码变更检查中间件！
   app.use(requirePasswordChange);
 
-  // 4. 注册所有受保护路由！
+  // 4. 全局限流中间件：每个请求只计数一次！
+  //    （此前 rateLimiter 挂在每个受保护模块的 app.use 上，24 个模块挂载 /api/v1
+  //      导致同一请求被重复计数 24 次，100 次/分钟的限制 4~5 个请求就被打满 → 轮询 429）
+  app.use(rateLimiter);
+
+  // 5. 注册所有受保护路由（限流已全局处理，这里不再重复挂载）！
   for (const mod of modules) {
     if (!mod.options?.public && !mod.options?.webhook) {
-      if (mod.options?.noRateLimit) {
-        app.use(mod.path, mod.router);
-      } else {
-        app.use(mod.path, rateLimiter, mod.router);
-      }
+      app.use(mod.path, mod.router);
     }
   }
 
-  // 5. 全局错误处理中间件（必须在所有路由之后）
+  // 6. 全局错误处理中间件（必须在所有路由之后）
   app.use(notFoundHandler);
   app.use(errorHandler);
 }
