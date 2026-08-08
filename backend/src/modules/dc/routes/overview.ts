@@ -61,10 +61,24 @@ router.get('/', (_req: Request, res: Response) => {
       roomDeviceCounts[rack.room_id] = (roomDeviceCounts[rack.room_id] || 0) + (rackCounts[rack.id] || 0);
     }
 
+    // 计算环境/能耗汇总（供顶栏展示）
+    const avgPue = realRooms.length > 0 ? (realRooms.reduce((s, r) => s + (r.pue || 1.45), 0) / realRooms.length) : 1.45;
+    const totalPowerKw = realRooms.length > 0
+      ? realRooms.reduce((s, r) => s + (r.total_power_kw || 0), 0)
+      : (totalDevices * 0.35);
+    // 制冷/IT 功耗推算：PUE = 总功耗 / IT功耗 → IT = 总 / PUE，制冷 = 总 - IT
+    const itPowerKw = totalPowerKw > 0 && avgPue > 1 ? totalPowerKw / avgPue : 0;
+    const coolingPowerKw = totalPowerKw - itPowerKw;
+
     res.json({
       success: true,
       data: {
         rooms: realRooms,
+        // 顶层字段：供 DataRoom 顶栏直接读取
+        pue: avgPue,
+        totalPowerKw,
+        coolingPower: coolingPowerKw,
+        itPower: itPowerKw,
         summary: {
           totalRooms: realRooms.length,
           totalRacks: rackData.length,
@@ -74,8 +88,10 @@ router.get('/', (_req: Request, res: Response) => {
           alertDevices,
           avgTemp: realRooms.reduce((s, r) => s + (r.current_temperature || 25), 0) / (realRooms.length || 1),
           avgHumidity: realRooms.reduce((s, r) => s + (r.current_humidity || 50), 0) / (realRooms.length || 1),
-          pue: realRooms.length > 0 ? (realRooms.reduce((s, r) => s + (r.pue || 1.45), 0) / realRooms.length) : 1.45,
-          totalPowerKw: realRooms.length > 0 ? realRooms.reduce((s, r) => s + (r.total_power_kw || 0), 0) : (totalDevices * 0.35),
+          pue: avgPue,
+          totalPowerKw,
+          coolingPower: coolingPowerKw,
+          itPower: itPowerKw,
         },
         rackData: rackData.map(r => ({
           ...r,

@@ -11,7 +11,7 @@ import api from '../../../../lib/api';
 import type { Room, Rack, Slot, PDU, LifecycleRecord, OverviewData, Manufacturer, DeviceTypeInfo, PowerPanel, PowerFeed, Cable, DeviceSummary, DeviceGroup } from './types';
 
 interface ExportData {
-  summary?: { rooms?: number; racks?: number; devices?: number };
+  summary?: { rooms?: number; racks?: number; slots?: number; pdus?: number; lifecycles?: number };
   rooms?: unknown[];
   racks?: unknown[];
 }
@@ -218,7 +218,13 @@ export default function useDataCenter() {
     try {
       const values = await roomForm.validateFields();
       if (editingRoom) {
-        await api.put(`/dc/rooms/${editingRoom.id}`, values);
+        // 环境字段未改动则不上送（避免把自动模拟的机房误标记为手动填写）
+        const envUnchanged =
+          (values.temperature ?? null) === (editingRoom.current_temperature ?? null) &&
+          (values.humidity ?? null) === (editingRoom.current_humidity ?? null) &&
+          (values.pue ?? null) === (editingRoom.pue ?? null);
+        const body = envUnchanged ? { ...values, temperature: undefined, humidity: undefined, pue: undefined } : values;
+        await api.put(`/dc/rooms/${editingRoom.id}`, body);
         message.success('机房更新成功');
       } else {
         await api.post('/dc/rooms', values);

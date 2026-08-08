@@ -23,9 +23,17 @@ router.get('/', (_req: Request, res: Response) => {
 // POST /rooms — 创建机房
 router.post('/', requireRole('admin', 'operator'), (req: Request, res: Response) => {
   try {
-    const { name, label, description, width_m, depth_m, sort_order } = req.body;
+    const { name, label, description, width_m, depth_m, sort_order, temperature, humidity, pue } = req.body;
     const id = crypto.randomUUID();
-    dcCrudService.rooms.create({ id, name, label, description, width_m, depth_m, sort_order });
+    // 任一环境字段非空 → 标记为手动填写，停止模拟覆盖温湿度/PUE
+    const hasEnv = [temperature, humidity, pue].some((v) => v !== undefined && v !== null && v !== '');
+    dcCrudService.rooms.create({
+      id, name, label, description, width_m, depth_m, sort_order,
+      temperature: hasEnv ? (Number(temperature) || null) : null,
+      humidity: hasEnv ? (Number(humidity) || null) : null,
+      pue: hasEnv ? (Number(pue) || null) : null,
+      env_manual: hasEnv ? 1 : 0,
+    });
     res.json({ success: true, data: { id } });
   } catch (error: unknown) {
     logger.error('Failed to operate dc rooms', error);
@@ -36,8 +44,15 @@ router.post('/', requireRole('admin', 'operator'), (req: Request, res: Response)
 // PUT /rooms/:id — 更新机房
 router.put('/:id', requireRole('admin', 'operator'), (req: Request, res: Response) => {
   try {
-    const { name, label, description, width_m, depth_m, layout_config, sort_order } = req.body;
-    dcCrudService.rooms.update(req.params.id, { name, label, description, width_m, depth_m, layout_config, sort_order });
+    const { name, label, description, width_m, depth_m, layout_config, sort_order, temperature, humidity, pue } = req.body;
+    const hasEnv = [temperature, humidity, pue].some((v) => v !== undefined && v !== null && v !== '');
+    dcCrudService.rooms.update(req.params.id, {
+      name, label, description, width_m, depth_m, layout_config, sort_order,
+      temperature: hasEnv ? (Number(temperature) || null) : null,
+      humidity: hasEnv ? (Number(humidity) || null) : null,
+      pue: hasEnv ? (Number(pue) || null) : null,
+      env_manual: hasEnv ? 1 : undefined,
+    });
     res.json({ success: true });
   } catch (error: unknown) {
     logger.error('Failed to operate dc rooms', error);

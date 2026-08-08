@@ -118,6 +118,7 @@ import v059DcPolymorphicFk from './v059_dc_polymorphic_fk';
 import v060AgentExecutionsArchive from './v060_agent_executions_archive';
 // === 修复 v058 FK 污染 v061 ===
 import v061FixCorruptedFk from './v061_fix_corrupted_fk';
+import v062DcRoomEnvManual from './v062_dc_room_env_manual';
 
 // Helper: wrap sync up/down into async
 function wrapAsync(fn: (db: any) => void): (db: any) => Promise<void> {
@@ -374,6 +375,8 @@ export const ALL_MIGRATIONS: Migration[] = [
   v060AgentExecutionsArchive,
   // v061: 修复 v058 FK 污染（dc_rack_slots / dc_pdus / dc_power_feeds / triggers）
   v061FixCorruptedFk,
+  // v062: dc_rooms 增加 env_manual 列，支持手动填写环境数据
+  v062DcRoomEnvManual,
 ];
 
 export function createMigrationManager(db: any): MigrationManager {

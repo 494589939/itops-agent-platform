@@ -10,6 +10,14 @@ export interface DcRoomCreateInput {
   depth_m?: number;
   layout_config?: string;
   sort_order?: number;
+  /** 手动填写的环境数据（℃） */
+  temperature?: number | null;
+  /** 手动填写的环境数据（%） */
+  humidity?: number | null;
+  /** 手动填写的 PUE */
+  pue?: number | null;
+  /** 1=手动填写（停止模拟覆盖温湿度/PUE），0=自动模拟 */
+  env_manual?: number;
 }
 
 export interface DcRoomUpdateInput {
@@ -20,6 +28,10 @@ export interface DcRoomUpdateInput {
   depth_m?: number;
   layout_config?: string;
   sort_order?: number;
+  temperature?: number | null;
+  humidity?: number | null;
+  pue?: number | null;
+  env_manual?: number;
 }
 
 export const roomsRepo = {
@@ -53,11 +65,14 @@ export const roomsRepo = {
 
   create(input: DcRoomCreateInput): void {
     db.prepare(`
-      INSERT INTO dc_rooms (id, name, label, description, width_m, depth_m, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO dc_rooms (id, name, label, description, width_m, depth_m, sort_order,
+        current_temperature, current_humidity, pue, env_manual)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       input.id, input.name, input.label ?? '', input.description ?? '',
-      input.width_m ?? 20, input.depth_m ?? 15, input.sort_order ?? 0
+      input.width_m ?? 20, input.depth_m ?? 15, input.sort_order ?? 0,
+      input.temperature ?? null, input.humidity ?? null, input.pue ?? null,
+      input.env_manual ?? 0
     );
   },
 
@@ -76,12 +91,19 @@ export const roomsRepo = {
     db.prepare(`
       UPDATE dc_rooms
       SET name=?, label=?, description=?, width_m=?, depth_m=?,
-          layout_config=?, sort_order=?, updated_at=datetime('now','localtime')
+          layout_config=?, sort_order=?,
+          current_temperature=COALESCE(?, current_temperature),
+          current_humidity=COALESCE(?, current_humidity),
+          pue=COALESCE(?, pue),
+          env_manual=COALESCE(?, env_manual),
+          updated_at=datetime('now','localtime')
       WHERE id=?
     `).run(
       input.name, input.label ?? '', input.description ?? '',
       input.width_m ?? 20, input.depth_m ?? 15,
-      input.layout_config ?? '{}', input.sort_order ?? 0, id
+      input.layout_config ?? '{}', input.sort_order ?? 0,
+      input.temperature ?? null, input.humidity ?? null, input.pue ?? null,
+      input.env_manual ?? null, id
     );
   },
 

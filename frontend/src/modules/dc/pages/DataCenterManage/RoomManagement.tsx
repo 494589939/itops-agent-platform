@@ -20,12 +20,30 @@ export default function RoomManagement({ dc }: Props) {
     { title: '名称', dataIndex: 'name', key: 'name' },
     { title: '标签', dataIndex: 'label', key: 'label', render: (v: string) => <Tag>{v}</Tag> },
     { title: '尺寸', key: 'size', render: (_: unknown, r: Room) => `${r.width_m || 20}m × ${r.depth_m || 15}m` },
+    {
+      title: '环境', key: 'env', render: (_: unknown, r: Room) => {
+        const t = r.current_temperature ?? '';
+        const h = r.current_humidity ?? '';
+        const p = r.pue ?? '';
+        const text = [t !== '' ? `${t}°C` : '', h !== '' ? `${h}%` : '', p !== '' ? `PUE ${p}` : ''].filter(Boolean).join(' / ');
+        return <span>{text || <span className="text-text-tertiary">自动模拟</span>}{r.env_manual === 1 ? <Tag color="green" style={{ marginLeft: 4 }}>手动</Tag> : null}</span>;
+      }
+    },
     { title: '排序', dataIndex: 'sort_order', key: 'sort_order' },
     {
       title: '操作', key: 'action', render: (_: unknown, rec: Room) => (
         <Space>
           <Button type="link" size="small" icon={<Edit size={14} />}
-            onClick={() => { dc.setEditingRoom(rec); dc.roomForm.setFieldsValue(rec); dc.setRoomModalOpen(true); }}>编辑</Button>
+            onClick={() => {
+              dc.setEditingRoom(rec);
+              dc.roomForm.setFieldsValue({
+                ...rec,
+                temperature: rec.current_temperature,
+                humidity: rec.current_humidity,
+                pue: rec.pue,
+              });
+              dc.setRoomModalOpen(true);
+            }}>编辑</Button>
           <Popconfirm title="确定删除?" onConfirm={() => dc.deleteRoom(rec.id)}>
             <Button type="link" size="small" danger icon={<Trash2 size={14} />}>删除</Button>
           </Popconfirm>
@@ -70,6 +88,12 @@ export default function RoomManagement({ dc }: Props) {
             <Form.Item name="width_m" label="宽度(m)"><InputNumber min={1} step={1} /></Form.Item>
             <Form.Item name="depth_m" label="深度(m)"><InputNumber min={1} step={1} /></Form.Item>
             <Form.Item name="sort_order" label="排序"><InputNumber min={0} step={1} /></Form.Item>
+          </Space>
+          <div className="text-xs text-text-tertiary mb-1">环境数据（可选，填写后停止自动模拟，用于 /data-room 顶栏展示）</div>
+          <Space className="w-full" style={{ display: 'flex' }}>
+            <Form.Item name="temperature" label="温度(°C)"><InputNumber min={0} max={60} step={0.1} style={{ width: 110 }} /></Form.Item>
+            <Form.Item name="humidity" label="湿度(%)"><InputNumber min={0} max={100} step={1} style={{ width: 110 }} /></Form.Item>
+            <Form.Item name="pue" label="PUE"><InputNumber min={1} max={3} step={0.01} style={{ width: 110 }} /></Form.Item>
           </Space>
         </Form>
       </Modal>

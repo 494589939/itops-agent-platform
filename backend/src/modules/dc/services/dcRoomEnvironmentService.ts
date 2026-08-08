@@ -32,11 +32,12 @@ function walk(current: number, min: number, max: number, step: number): number {
  *   - 湿度 30~70%
  *   - PUE 1.2~1.8
  *   - 总功率随设备数推算
+ *   - env_manual = 1 的机房（管理界面手动填写了温湿度/PUE）只更新功率，不覆盖环境值
  */
 function pollRoomEnvironment() {
   try {
     const rooms = db.prepare(`
-      SELECT id, current_temperature, current_humidity, pue, total_power_kw
+      SELECT id, current_temperature, current_humidity, pue, total_power_kw, env_manual
       FROM dc_rooms
     `).all() as Array<{
       id: string;
@@ -44,17 +45,25 @@ function pollRoomEnvironment() {
       current_humidity: number | null;
       pue: number;
       total_power_kw: number;
+      env_manual: number;
     }>;
 
     for (const r of rooms) {
-      const temp = walk(r.current_temperature ?? 24, 18, 28, 0.5);
-      const hum = walk(r.current_humidity ?? 50, 30, 70, 2);
-      const pue = walk(r.pue || 1.45, 1.2, 1.8, 0.05);
-      // 按机柜 + 设备估算功率
+      // 按机柜 + 设备估算功率（所有机房统一推算）
       const rackCount = (db.prepare(
         'SELECT COUNT(*) as c FROM dc_racks WHERE room_id = ?'
       ).get(r.id) as { c: number }).c;
       const totalPower = rackCount * 3.2; // 假设每机柜平均 3.2kW
+
+      // 手动填写的机房：保留温湿度/PUE，只更新功率
+      if (r.env_manual === 1) {
+        db.prepare('UPDATE dc_rooms SET total_power_kw = ? WHERE id = ?').run(totalPower, r.id);
+        continue;
+      }
+
+      const temp = walk(r.current_temperature ?? 24, 18, 28, 0.5);
+      const hum = walk(r.current_humidity ?? 50, 30, 70, 2);
+      const pue = walk(r.pue || 1.45, 1.2, 1.8, 0.05);
 
       db.prepare(`
         UPDATE dc_rooms
