@@ -62,6 +62,21 @@ interface SnmpCredential {
   [key: string]: unknown;
 }
 
+/** 根据已扫描进度 + 启动时间估算剩余时间（秒） */
+function estimateEta(job: DiscoveryJob): string | null {
+  if (job.status !== 'running' || !job.progress || job.progress >= 100 || !job.started_at) return null;
+  const started = new Date(job.started_at).getTime();
+  if (Number.isNaN(started) || started <= 0) return null;
+  const elapsedSec = (Date.now() - started) / 1000;
+  if (elapsedSec <= 0) return null;
+  const etaSec = (elapsedSec / job.progress) * (100 - job.progress);
+  if (etaSec <= 0 || !Number.isFinite(etaSec)) return null;
+  if (etaSec < 60) return `剩余约 ${Math.max(1, Math.round(etaSec))} 秒`;
+  const m = Math.floor(etaSec / 60);
+  const s = Math.round(etaSec % 60);
+  return `剩余约 ${m} 分 ${s} 秒`;
+}
+
 export default function NetworkDiscovery() {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -129,8 +144,8 @@ export default function NetworkDiscovery() {
       }),
     onSuccess: (res) => {
       // 立即把新任务写入缓存顶部（乐观更新），不依赖 refetch 完成才显示
-      // （避免 invalidate 触发的 refetch 因网络/时序问题未生效时列表不刷新）
-      const newJob = res.data as DiscoveryJob | undefined;
+      // （axios 拦截器已解包 response.data，res 本身就是任务对象）
+      const newJob = res as unknown as DiscoveryJob | undefined;
       if (newJob) {
         queryClient.setQueryData<DiscoveryJob[]>(['network-discovery-jobs'], (old) => {
           const current = Array.isArray(old) ? old : [];
@@ -146,20 +161,29 @@ export default function NetworkDiscovery() {
     },
   });
 
-  // 取消扫描
+  // 取消扫描（乐观更新：立即显示已取消，避免等轮询）
   const cancelJob = useMutation({
     mutationFn: (jobId: string) => api.post(`/network-discovery/jobs/${jobId}/cancel`),
-    onSuccess: () => {
+    onSuccess: (_data: unknown, variables: string) => {
+      queryClient.setQueryData<DiscoveryJob[]>(['network-discovery-jobs'], (old) =>
+        (Array.isArray(old) ? old : []).map((j) =>
+          j.id === variables ? { ...j, status: 'cancelled' as const, progress: j.progress || 0 } : j,
+        ),
+      );
       queryClient.invalidateQueries({ queryKey: ['network-discovery-jobs'] });
     },
   });
 
-  // 删除扫描
+  // 删除扫描（乐观更新：立即从列表移除，结果缓存一并清掉）
   const deleteJob = useMutation({
     mutationFn: (jobId: string) => api.delete(`/network-discovery/jobs/${jobId}`),
     onSuccess: (_data: unknown, variables: string) => {
-      queryClient.invalidateQueries({ queryKey: ['network-discovery-jobs'] });
+      queryClient.setQueryData<DiscoveryJob[]>(['network-discovery-jobs'], (old) =>
+        (Array.isArray(old) ? old : []).filter((j) => j.id !== variables),
+      );
+      queryClient.setQueryData(['network-discovery-results', variables], undefined);
       if (selectedJobId === variables) setSelectedJobId(null);
+      queryClient.invalidateQueries({ queryKey: ['network-discovery-jobs'] });
     },
   });
 
@@ -336,9 +360,17 @@ export default function NetworkDiscovery() {
                         </span>
                         <span>{job.total_hosts} 个主机</span>
                         <span>已发现 {job.found_devices} 个设备</span>
-                        {job.status === 'running' && (
-                          <span className="text-blue-400 font-medium">扫描中 {job.progress}%</span>
-                        )}
+                        <span>
+                          {job.status === 'running' && (
+                            <span className="text-blue-400 font-medium">
+                              扫描中 {job.progress}%（{job.scanned_hosts}/{job.total_hosts}）
+                              {estimateEta(job) ? ` · ${estimateEta(job)}` : ''}
+                            </span>
+                          )}
+                          {job.status === 'pending' && (
+                            <span className="text-slate-400 font-medium">等待开始…</span>
+                          )}
+                        </span>
                         <span>
                           {job.created_at ? new Date(job.created_at).toLocaleString() : ''}
                         </span>
@@ -370,10 +402,15 @@ export default function NetworkDiscovery() {
                     </button>
                   </div>
                 </div>
-                {job.status === 'running' && (
+                {(job.status === 'pending' || job.status === 'running') && (
                   <div className="mt-3 h-1.5 bg-background rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-500"
+                      className={clsx(
+                        'h-full rounded-full transition-all duration-500',
+                        job.status === 'pending'
+                          ? 'bg-slate-500/60'
+                          : 'bg-gradient-to-r from-blue-500 to-emerald-500',
+                      )}
                       style={{ width: `${job.progress || 0}%` }}
                     />
                   </div>
