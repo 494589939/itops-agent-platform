@@ -2,7 +2,10 @@ import { Play, X as XIcon, ExternalLink, CheckCircle2, AlertCircle as AlertCircl
 import type { ProcessResult } from './types';
 
 function hasProcessRecords(result: ProcessResult) {
-  return result.matchedPolicies.length > 0 || (result.mappingTasks?.length || 0) > 0;
+  return (result.matchedPolicies?.length || 0) > 0
+    || (result.mappingTasks?.length || 0) > 0
+    || (result.executionIds?.length || 0) > 0
+    || !!result.executionId;
 }
 
 interface AlertDetailPanelProps {
@@ -16,21 +19,24 @@ export default function AlertDetailPanel({
   onClose,
   navigate,
 }: AlertDetailPanelProps) {
+  const failed = !!processResult.error;
+  const hasRecords = hasProcessRecords(processResult);
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-surface rounded-xl border border-border max-w-lg w-full shadow-2xl max-h-[80vh] flex flex-col">
         {/* 头部 */}
         <div className={`p-4 border-b border-border flex items-center justify-between rounded-t-xl ${
-          processResult.error
+          failed
             ? 'bg-gradient-to-r from-amber-500/10 to-red-500/10'
-            : hasProcessRecords(processResult)
+            : hasRecords
               ? 'bg-gradient-to-r from-green-500/10 to-blue-500/10'
               : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10'
         }`}>
           <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
-            {processResult.error ? (
+            {failed ? (
               <AlertCircle2 className="w-5 h-5 text-red-500" />
-            ) : hasProcessRecords(processResult) ? (
+            ) : hasRecords ? (
               <CheckCircle2 className="w-5 h-5 text-green-500" />
             ) : (
               <Play className="w-5 h-5 text-blue-500" />
@@ -48,23 +54,25 @@ export default function AlertDetailPanel({
         <div className="p-5 space-y-4 overflow-auto flex-1">
           {/* 状态 */}
           <div className={`p-3 rounded-lg border ${
-            processResult.error
+            failed
               ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400'
-              : hasProcessRecords(processResult)
+              : hasRecords
                 ? 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400'
                 : 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400'
           }`}>
             <p className="text-sm font-medium">
-              {processResult.error
+              {failed
                 ? '⚠️ 执行遇到错误: ' + processResult.error
-                : hasProcessRecords(processResult)
-                  ? `触发 ${processResult.matchedPolicies.length} 条修复策略，${processResult.mappingTasks?.length || 0} 个告警映射任务，${processResult.executionIds.length} 条修复执行记录已创建`
-                  : 'ℹ️ 未匹配到任何修复策略（告警级别/关键词不满足已有策略条件）'}
+                : processResult.matchedPolicies
+                  ? `触发 ${processResult.matchedPolicies.length} 条修复策略，${processResult.mappingTasks?.length || 0} 个告警映射任务，${processResult.executionIds?.length || 0} 条修复执行记录已创建`
+                  : processResult.strategy
+                    ? `已触发策略「${processResult.strategy}」${processResult.executionId ? `，执行记录 ID: ${processResult.executionId}` : ''}`
+                    : 'ℹ️ 未匹配到任何修复策略（告警级别/关键词不满足已有策略条件）'}
             </p>
           </div>
 
           {/* 策略列表 */}
-          {processResult.matchedPolicies.length > 0 && (
+          {processResult.matchedPolicies && processResult.matchedPolicies.length > 0 && (
             <div>
               <h4 className="text-sm font-semibold text-text-primary mb-2 flex items-center gap-1.5">
                 <ListChecks className="w-4 h-4 text-primary" />
@@ -110,16 +118,25 @@ export default function AlertDetailPanel({
             </div>
           )}
 
-          {processResult.executionIds.length > 0 && (
+          {/* 执行记录（兼容旧结构 executionIds 数组 + 新结构 executionId） */}
+          {(processResult.executionIds?.length || 0) > 0 && (
             <div>
               <h4 className="text-sm font-semibold text-text-primary mb-2">执行记录 ID</h4>
               <div className="space-y-1">
-                {processResult.executionIds.map(eid => (
+                {processResult.executionIds!.map(eid => (
                   <code key={eid} className="block text-xs bg-background px-2 py-1 rounded border border-border text-text-secondary truncate">
                     {eid}
                   </code>
                 ))}
               </div>
+            </div>
+          )}
+          {processResult.executionId && !(processResult.executionIds?.length) && (
+            <div>
+              <h4 className="text-sm font-semibold text-text-primary mb-2">执行记录 ID</h4>
+              <code className="block text-xs bg-background px-2 py-1 rounded border border-border text-text-secondary truncate">
+                {processResult.executionId}
+              </code>
             </div>
           )}
         </div>
@@ -132,7 +149,7 @@ export default function AlertDetailPanel({
           >
             关闭
           </button>
-          {processResult.executionIds.length > 0 && (
+          {(processResult.executionIds?.length || 0) > 0 || processResult.executionId ? (
             <button
               onClick={() => {
                 onClose();
@@ -143,7 +160,7 @@ export default function AlertDetailPanel({
               <ExternalLink className="w-3.5 h-3.5" />
               查看执行记录
             </button>
-          )}
+          ) : null}
           {!!processResult.mappingTasks?.length && (
             <button
               onClick={() => {

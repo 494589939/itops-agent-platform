@@ -11,11 +11,15 @@ export interface Alert {
 }
 
 export interface ProcessResult {
+  /** 后端当前实际返回（POST /alerts/:id/process） */
   alertId: string;
-  matchedPolicies: Array<{ id: string; name: string; execution_mode: string }>;
+  strategy?: string;
+  executionId?: string;
+  error?: string | null;
+  /** 兼容旧版返回结构（matchedPolicies 等），字段全部可选 */
+  matchedPolicies?: Array<{ id: string; name: string; execution_mode: string }>;
   mappingTasks?: Array<{ taskId: string; mappingId: string; workflowId: string; workflowName: string }>;
-  executionIds: string[];
-  error: string | null;
+  executionIds?: string[];
 }
 
 export interface AutomationLog {
