@@ -219,7 +219,11 @@ export default function NetworkDevices() {
         <AddDeviceModal
           device={state.editingDevice}
           onClose={closeAddModal}
-          onSuccess={() => { closeAddModal(); /* query invalidation handled in hook */ }}
+          onSuccess={() => {
+            closeAddModal();
+            // 添加/编辑成功后立即刷新设备列表，避免需要手动点刷新才出现
+            state.refreshDevices();
+          }}
         />
       )}
 

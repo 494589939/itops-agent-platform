@@ -127,7 +127,17 @@ export default function NetworkDiscovery() {
         end_ip: endIp,
         credential_ids: credentialIds,
       }),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      // 立即把新任务写入缓存顶部（乐观更新），不依赖 refetch 完成才显示
+      // （避免 invalidate 触发的 refetch 因网络/时序问题未生效时列表不刷新）
+      const newJob = res.data as DiscoveryJob | undefined;
+      if (newJob) {
+        queryClient.setQueryData<DiscoveryJob[]>(['network-discovery-jobs'], (old) => {
+          const current = Array.isArray(old) ? old : [];
+          if (current.some((j) => j.id === newJob.id)) return current;
+          return [newJob, ...current];
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['network-discovery-jobs'] });
       toast.success('扫描任务已创建');
     },

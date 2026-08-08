@@ -2,28 +2,70 @@
 /**
  * 扫描任务生命周期管理
  * 从 networkDiscoveryService.ts 提取的任务创建、启动、管理、导入逻辑
+ *
+ * 2026-08-08 修复：
+ *   - 用 isHostOnline 替代纯 ping：ping 失败时用 TCP 端口探测兜底
+ *     （容器内非 root 用户 ping 缺 CAP_NET_RAW 权限会直接失败）
+ *   - 用户没选 SNMP 凭证时，自动添加默认 public community 兜底
+ *     （否则即使扫到在线设备也会因 credentials=[] 全部判为 online 而非 snmp_ok）
+ *   - 增加扫描日志，方便排查扫描不出设备的问题
  */
 
 import { randomUUID } from 'crypto';
-import { promisify } from 'util';
-import { exec } from 'child_process';
 import { logger } from '../../../../utils/logger';
 import { decrypt } from '../../../auth/services/encryptionService';
 import { getErrorMessage } from '../../../../utils/errorHelpers';
 import { networkDeviceRepository, snmpCredentialsRepo } from '../../../../repositories';
 import type { SnmpCredentialRecord } from '../../../../repositories/snmpRepository';
-import { buildPingCommand, isPingSuccess, calculateIpRange, generateIpList } from './icmpDiscovery';
+import { calculateIpRange, generateIpList, isHostOnline } from './icmpDiscovery';
 import { trySnmpConnect } from './snmpDiscovery';
 import type { DiscoveryJob, DiscoveryResult } from './networkDiscoveryService';
-
-const execAsync = promisify(exec);
 
 export interface JobManagerDeps {
   activeJobs: Map<string, AbortController>;
 }
 
 /**
- * Ping IP 并尝试 SNMP 发现
+ * 构建默认 SNMP 凭证兜底（用户没选任何凭证时使用）
+ *
+ * 很多网络设备出厂默认 community=public，用户没选凭证时
+ * 自动用 public 试一次，避免扫描结果全是 online 而非 snmp_ok。
+ */
+function buildDefaultCredentials(): SnmpCredentialRecord[] {
+  return [{
+    id: 'default-public',
+    name: '默认 public 凭证',
+    community: 'public',
+    snmp_version: '2c',
+    snmp_port: 161,
+    snmp_user: null,
+    snmp_auth_protocol: null,
+    snmp_auth_key: null,
+    snmp_priv_protocol: null,
+    snmp_priv_key: null,
+    host: null,
+    device_id: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }];
+}
+
+/**
+ * 安全解密:解密失败(旧版本明文数据 / 损坏密文)时保留原值并告警,
+ * 避免 startJob 因单个凭证解密异常整体失败、任务卡在 running 且无结果。
+ */
+function safeDecrypt(value: string | null | undefined, field: string, credId: string): string | null {
+  if (!value) return null;
+  try {
+    return decrypt(value);
+  } catch (err) {
+    logger.warn(`[${field}] of SNMP credential ${credId} not decryptable, using as-is: ${getErrorMessage(err)}`);
+    return value;
+  }
+}
+
+/**
+ * Ping/TCP 探测 IP 并尝试 SNMP 发现
  */
 async function pingAndDiscover(
   jobId: string, ip: string, credentials: SnmpCredentialRecord[], signal: AbortSignal
@@ -31,22 +73,17 @@ async function pingAndDiscover(
   if (signal.aborted) return false;
 
   const startTime = Date.now();
-  let isOnline = false;
 
-  try {
-    // 跨平台 Ping 检测
-    const { stdout } = await execAsync(buildPingCommand(ip), { timeout: 3000 });
-    isOnline = isPingSuccess(stdout);
-  } catch {
-    isOnline = false;
-  }
-
+  // 综合在线检测：先 ping，ping 失败用 TCP 端口兜底
+  const hostCheck = await isHostOnline(ip);
   const responseTimeMs = Date.now() - startTime;
 
-  if (!isOnline) {
+  if (!hostCheck.online) {
     networkDeviceRepository.insertDiscoveryResultOffline(randomUUID(), jobId, ip, responseTimeMs);
     return false;
   }
+
+  logger.debug(`📡 [${jobId}] ${ip} online via ${hostCheck.method}${hostCheck.port ? `(:${hostCheck.port})` : ''}, trying SNMP...`);
 
   // 在线 → 尝试 SNMP 连接
   let snmpResult: any = null;
@@ -55,7 +92,6 @@ async function pingAndDiscover(
   for (const cred of credentials) {
     if (signal.aborted) return false;
     try {
-      // Try direct SNMP connection (using snmpService's testing mechanism)
       const snmpInfo = await trySnmpConnect(ip, cred);
       if (snmpInfo) {
         snmpResult = snmpInfo;
@@ -143,19 +179,26 @@ export async function startJob(deps: JobManagerDeps, jobId: string): Promise<voi
 
   const ips = generateIpList(job.start_ip, job.end_ip);
   const credentialIds: string[] = JSON.parse(job.credential_ids || '[]');
-  const credentials = credentialIds.map(id => {
+  let credentials = credentialIds.map(id => {
     const cred = snmpCredentialsRepo.getById(id);
     if (!cred) return null;
     // 解密凭证字段，否则 SNMP 认证会用密文必然失败
     return {
       ...cred,
-      community: cred.community ? decrypt(cred.community) : null,
-      snmp_auth_key: cred.snmp_auth_key ? decrypt(cred.snmp_auth_key) : null,
-      snmp_priv_key: cred.snmp_priv_key ? decrypt(cred.snmp_priv_key) : null,
+      community: safeDecrypt(cred.community, 'community', cred.id),
+      snmp_auth_key: safeDecrypt(cred.snmp_auth_key, 'snmp_auth_key', cred.id),
+      snmp_priv_key: safeDecrypt(cred.snmp_priv_key, 'snmp_priv_key', cred.id),
     };
   }).filter(Boolean) as SnmpCredentialRecord[];
 
-  logger.info(`📡 Starting scan job ${jobId}: ${ips.length} hosts, ${credentials.length} credentials`);
+  // 用户没选任何 SNMP 凭证时，自动添加默认 public community 兜底
+  // （很多设备出厂默认 community=public，不选凭证也能扫到基本信息）
+  if (credentials.length === 0) {
+    credentials = buildDefaultCredentials();
+    logger.info(`📡 [${jobId}] No SNMP credentials selected, using default 'public' community as fallback`);
+  }
+
+  logger.info(`📡 Starting scan job ${jobId}: ${ips.length} hosts (${job.start_ip} → ${job.end_ip}), ${credentials.length} credentials`);
 
   // 分批 Ping 扫描（每批 20 个 IP）
   const BATCH_SIZE = 20;
