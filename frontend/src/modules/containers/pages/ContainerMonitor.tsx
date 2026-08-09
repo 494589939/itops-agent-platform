@@ -78,17 +78,23 @@ export default function ContainerMonitor() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [containerRes, snapRes] = await Promise.all([
-        api.get('/containers'),
-        api.get('/docker-monitor/cluster-snapshot'),
-      ]);
+      // 1. 先拉容器列表 → 立即渲染表格（不等慢速 stats）
+      const containerRes = await api.get('/containers');
       // API 可能返回数组或 { items: [...], total: N } 对象，统一提取为数组
       const containerPayload = containerRes.data?.data ?? containerRes.data;
       const containerList = Array.isArray(containerPayload)
         ? containerPayload
         : (containerPayload?.items ?? []);
       setData(containerList);
+    } catch {
+      message.error('加载失败');
+    } finally {
+      setLoading(false);
+    }
 
+    // 2. 再拉集群快照（stats 双采样较慢，独立失败不影响列表）
+    try {
+      const snapRes = await api.get('/docker-monitor/cluster-snapshot');
       const snap = snapRes.data?.data ?? snapRes.data;
       setClusterStats(snap || {
         totalContainers: 0, runningContainers: 0, totalCpuPercent: '0',
@@ -115,9 +121,7 @@ export default function ContainerMonitor() {
         setContainerStatsMap(map);
       }
     } catch {
-      message.error('加载失败');
-    } finally {
-      setLoading(false);
+      // 快照失败不阻塞列表展示（顶部卡片保持默认值）
     }
   }, []);
 

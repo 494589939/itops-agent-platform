@@ -172,6 +172,11 @@ export async function collectContainerLogs(
 // 无法直接计算瞬时 CPU；需在服务端维护每次采样的 CPU 基准做差值。
 const cpuBaseline = new Map<string, { cpuUsage: number; systemUsage: number }>();
 
+/** 该容器是否已建立 CPU 采样基准（有基准则单次采样即可算出真实 CPU） */
+export function hasCpuBaseline(id: string): boolean {
+  return cpuBaseline.has(id);
+}
+
 export async function impl_getContainerStats(service: DS, id: string): Promise<DockerContainerStats> {
   if (!service.initialized) throw new Error('Docker service not available');
   

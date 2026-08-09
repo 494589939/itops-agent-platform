@@ -81,10 +81,14 @@ class ContainerMonitorService {
         .slice(0, 50) // 限制并发
         .map(async (c) => {
           try {
-            // 双采样（间隔 250ms）：第一次建立 CPU 基准，第二次返回带差值的真实统计
-            // （单次采样时 Docker precpu_stats 等于当前值，CPU 恒为 0）
-            await dockerService.getContainerStats(c.id);
-            await new Promise(resolve => setTimeout(resolve, 250));
+            // 有 CPU 基准的容器单次采样即可算出真实 CPU（快）；
+            // 首次（无基准）双采样建立基准。
+            // 单次采样时 Docker precpu_stats 等于当前值，CPU 恒为 0，
+            // 基准差值在 getContainerStats 内部维护。
+            if (!dockerService.hasCpuBaseline(c.id)) {
+              await dockerService.getContainerStats(c.id);
+              await new Promise(resolve => setTimeout(resolve, 150));
+            }
             const stats = await dockerService.getContainerStats(c.id);
             return { id: c.id, name: c.name, ...stats };
           } catch { return null; }

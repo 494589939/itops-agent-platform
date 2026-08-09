@@ -135,6 +135,7 @@ import {
   impl_removeContainer,
   impl_getContainerLogs,
   impl_getContainerStats,
+  hasCpuBaseline as hasCpuBaselineImpl,
   impl_pauseContainer,
   impl_unpauseContainer,
   impl_runContainer,
@@ -227,6 +228,11 @@ export class DockerServiceClass {
 
   async getContainerStats(id: string): Promise<DockerContainerStats> {
     return impl_getContainerStats(this, id);
+  }
+
+  /** 是否已建立该容器的 CPU 采样基准（有基准则单次采样即可算出真实 CPU） */
+  hasCpuBaseline(id: string): boolean {
+    return hasCpuBaselineImpl(id);
   }
 
   async pauseContainer(id: string): Promise<void> {
