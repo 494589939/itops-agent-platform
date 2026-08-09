@@ -64,6 +64,7 @@
     "users": "User Management",
     "backups": "Backup Settings",
     "settings": "Settings",
+    "accessControl": "Access Control",
     "dbConnections": "DB Connections",
     "aiModels": "AI Models",
     "agents": "Agent Management",

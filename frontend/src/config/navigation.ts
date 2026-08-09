@@ -255,6 +255,7 @@ export const navigationGroups: NavGroup[] = [
         icon: FlaskConical,
       },
       { name: "nav.toolLinks", href: "/tool-links", icon: Link2 },
+      { name: "nav.accessControl", href: "/access-control", icon: ShieldCheck },
       { name: "nav.settings", href: "/settings", icon: Settings },
       // 注：/tools（infra 模块）与 /agents/tools 功能重复（都调用 /agents/tools/* API），
       // 因此不单独暴露，用户通过 /agents/tools 访问工具测试 UI。

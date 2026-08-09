@@ -302,6 +302,11 @@ export const serversRepo = {
     `).run(checkResults, id);
   },
 
+  /** 按 ID 查询单条合规检查（报告/详情用） */
+  getComplianceCheckById(checkId: string): ComplianceCheck | undefined {
+    return db.prepare('SELECT * FROM compliance_checks WHERE id = ?').get(checkId) as ComplianceCheck | undefined;
+  },
+
   /** 更新服务器 OS 类型 */
   updateOsType(serverId: string, osType: string): void {
     db.prepare('UPDATE servers SET os_type = ? WHERE id = ?').run(osType, serverId);

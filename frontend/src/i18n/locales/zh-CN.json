@@ -58,6 +58,7 @@
     "users": "用户管理",
     "backups": "备份设置",
     "settings": "系统设置",
+    "accessControl": "访问控制",
     "dbConnections": "数据库连接",
     "aiModels": "AI模型",
     "agents": "Agent管理",

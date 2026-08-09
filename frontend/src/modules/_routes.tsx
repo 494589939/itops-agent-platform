@@ -20,6 +20,7 @@
  */
 
 import { aiRoutes } from './ai/routes';
+import { accessControlRoutes } from './access-control/routes';
 import { alertRoutes } from './alerts/routes';
 import { authRoutes, publicRoutes } from './auth/routes';
 import { auditRoutes } from './audit/routes';
@@ -51,6 +52,7 @@ const FrontendTests = lazy(() => import('../shared/pages/FrontendTests'));
  * 受保护的路由（需要登录）
  */
 export const protectedRoutes = [
+  ...accessControlRoutes,
   ...aiRoutes,
   ...alertRoutes,
   ...authRoutes,

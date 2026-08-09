@@ -6,6 +6,8 @@ import { getApiKey, getModelId, getApiBase } from '../../../utils/apiConfig';
 import { credentialService } from '../../auth/services/credentialService';
 import { requireRole } from '../../../middleware/auth';
 import { settingsCrudService } from '../services/settingsCrudService';
+import { getAllowedIps, getClientIp, isValidIPv4, ACCESS_CONTROL_SETTING_KEY } from '../../../middleware/accessControl';
+import { settingsRepository } from '../../../repositories';
 
 const router = Router();
 
@@ -27,6 +29,53 @@ router.put('/', (req: Request, res: Response) => {
     res.json({ success: true, message: 'Settings updated' });
   } catch {
     res.status(500).json({ success: false, error: 'Failed to update settings' });
+  }
+});
+
+// ── 平台访问控制（IP/网段白名单）──
+
+// GET 当前允许列表 + 请求来源 IP（供前端提示）
+router.get('/access-control', requireRole('admin'), (req: Request, res: Response) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        allowed_ips: getAllowedIps(),
+        current_ip: getClientIp(req),
+      },
+    });
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch access control' });
+  }
+});
+
+// PUT 更新允许列表（JSON 数组：精确 IP 或 CIDR 网段）
+router.put('/access-control', requireRole('admin'), (req: Request, res: Response) => {
+  try {
+    const { allowed_ips } = req.body as { allowed_ips?: unknown };
+    if (!Array.isArray(allowed_ips)) {
+      return res.status(400).json({ success: false, error: 'allowed_ips 必须是数组' });
+    }
+    const rules = allowed_ips.filter((r): r is string => typeof r === 'string' && r.trim() !== '');
+    // 校验格式：每项必须是合法 IPv4 或 CIDR（避免误配锁死）
+    const invalid = rules.filter((r) => {
+      const trimmed = r.trim();
+      const slashIdx = trimmed.indexOf('/');
+      if (slashIdx >= 0) {
+        const base = trimmed.slice(0, slashIdx).trim();
+        const prefix = trimmed.slice(slashIdx + 1).trim();
+        // CIDR：base 合法 IPv4 且 prefix 为 0-32 整数
+        return !isValidIPv4(base) || !/^\d{1,2}$/.test(prefix) || Number(prefix) > 32;
+      }
+      return !isValidIPv4(trimmed);
+    });
+    if (invalid.length > 0) {
+      return res.status(400).json({ success: false, error: `包含非法地址: ${invalid.join(', ')}` });
+    }
+    settingsRepository.upsert(ACCESS_CONTROL_SETTING_KEY, JSON.stringify(rules.map((r) => r.trim())));
+    res.json({ success: true, message: '访问控制已更新' });
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to update access control' });
   }
 });
 

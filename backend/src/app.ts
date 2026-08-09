@@ -13,6 +13,7 @@ import { container } from './core/serviceContainer';
 import { setupWebSocket } from './shared/websocket/handler';
 import { vncProxyService } from './modules/network/services/vncProxyService';
 import { setupSwagger } from './swagger';
+import { accessControlMiddleware } from './middleware/accessControl';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -36,6 +37,9 @@ app.use(cors(corsOptions));
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-origin' } }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// 平台访问控制（IP/网段白名单）：未配置时默认放行；配置后仅允许列表内来源访问
+app.use(accessControlMiddleware);
 
 app.use(express.static(path.join(__dirname, '../../frontend/dist')));
 
