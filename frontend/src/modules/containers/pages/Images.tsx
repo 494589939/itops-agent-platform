@@ -90,12 +90,18 @@ export default function Images() {
   const handlePull = async () => {
     const values = await form.validateFields();
     try {
-      await api.post('/images/pull', values);
+      // 后端 /images/pull 期望 { imageName, endpointId }；表单字段是 name/tag/serverId
+      const imageName =
+        values.tag && values.tag !== 'latest' ? `${values.name}:${values.tag}` : values.name;
+      await api.post('/images/pull', { imageName, endpointId: values.serverId || undefined });
       message.success('拉取请求已提交');
       setPullOpen(false);
       form.resetFields();
       fetchData();
-    } catch { message.error('拉取失败'); }
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(msg || '拉取失败');
+    }
   };
 
   const handleDelete = async (id: string) => {
