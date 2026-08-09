@@ -148,6 +148,11 @@ export const serverCrudService = {
     return serverRepository.servers.listComplianceChecks(id, limit);
   },
 
+  /** 按 ID 查询单条合规检查 */
+  getComplianceCheck(checkId: string) {
+    return serverRepository.servers.getComplianceCheckById(checkId);
+  },
+
   /**
    * 导出命令历史（组装 server 元信息 + 历史）
    */
