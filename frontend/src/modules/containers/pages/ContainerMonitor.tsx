@@ -185,7 +185,7 @@ export default function ContainerMonitor() {
       key: 'name',
       width: widthOf('name', 220),
       ellipsis: true,
-      onHeaderCell: () => ({ width: widthOf('name', 220), onWidthChange: setColWidth('name') }),
+      onHeaderCell: () => ({ width: widthOf('name', 220), onWidthChange: setColWidth('name'), onReset: () => setColWidth('name')(220) }),
       render: (text: string, record: Container) => (
         <Tooltip title={record.container_id}>
           <span className="font-medium">{text}</span>
@@ -198,7 +198,7 @@ export default function ContainerMonitor() {
       key: 'image',
       width: widthOf('image', 220),
       ellipsis: true,
-      onHeaderCell: () => ({ width: widthOf('image', 220), onWidthChange: setColWidth('image') }),
+      onHeaderCell: () => ({ width: widthOf('image', 220), onWidthChange: setColWidth('image'), onReset: () => setColWidth('image')(220) }),
     },
     {
       title: '状态',
@@ -206,7 +206,7 @@ export default function ContainerMonitor() {
       key: 'status',
       width: widthOf('status', 100),
       ellipsis: true,
-      onHeaderCell: () => ({ width: widthOf('status', 100), onWidthChange: setColWidth('status') }),
+      onHeaderCell: () => ({ width: widthOf('status', 100), onWidthChange: setColWidth('status'), onReset: () => setColWidth('status')(100) }),
       render: (status: string) => (
         <Tag color={statusColors[status] || 'default'}>{status}</Tag>
       ),
@@ -215,7 +215,7 @@ export default function ContainerMonitor() {
       title: 'CPU',
       key: 'cpu',
       width: widthOf('cpu', 180),
-      onHeaderCell: () => ({ width: widthOf('cpu', 180), onWidthChange: setColWidth('cpu') }),
+      onHeaderCell: () => ({ width: widthOf('cpu', 180), onWidthChange: setColWidth('cpu'), onReset: () => setColWidth('cpu')(180) }),
       render: (_: unknown, record: Container) => {
         const stats = containerStatsMap.get(record.id);
         const cpu = parseFloat(stats?.cpuPercent || '0');
@@ -233,7 +233,7 @@ export default function ContainerMonitor() {
       title: '内存',
       key: 'memory',
       width: widthOf('memory', 200),
-      onHeaderCell: () => ({ width: widthOf('memory', 200), onWidthChange: setColWidth('memory') }),
+      onHeaderCell: () => ({ width: widthOf('memory', 200), onWidthChange: setColWidth('memory'), onReset: () => setColWidth('memory')(200) }),
       render: (_: unknown, record: Container) => {
         const stats = containerStatsMap.get(record.id);
         const mem = stats?.memory;
@@ -255,7 +255,7 @@ export default function ContainerMonitor() {
       title: '网络 I/O',
       key: 'network',
       width: widthOf('network', 160),
-      onHeaderCell: () => ({ width: widthOf('network', 160), onWidthChange: setColWidth('network') }),
+      onHeaderCell: () => ({ width: widthOf('network', 160), onWidthChange: setColWidth('network'), onReset: () => setColWidth('network')(160) }),
       render: (_: unknown, record: Container) => {
         const stats = containerStatsMap.get(record.id);
         const net = stats?.network;
@@ -273,7 +273,7 @@ export default function ContainerMonitor() {
       title: '操作',
       key: 'actions',
       width: widthOf('actions', 240),
-      onHeaderCell: () => ({ width: widthOf('actions', 240), onWidthChange: setColWidth('actions') }),
+      onHeaderCell: () => ({ width: widthOf('actions', 240), onWidthChange: setColWidth('actions'), onReset: () => setColWidth('actions')(240) }),
       render: (_: unknown, record: Container) => {
         const isMonitoring = monitoredIds.has(record.id);
         return (
