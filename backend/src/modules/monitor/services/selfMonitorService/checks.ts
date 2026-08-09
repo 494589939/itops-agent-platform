@@ -187,7 +187,9 @@ export function checkMemory(config: MonitorConfig): MonitorCheck {
 export function checkErrorRate(config: MonitorConfig): MonitorCheck {
   try {
     const stats = logger.getStats();
-    const errorsLast5Min = stats.lastHour; // 近似
+    // 使用真实的 5 分钟窗口统计（last5Min）；不要用 lastHour——
+    // 1 小时累计错误很容易超过 5 分钟阈值(10/50)造成持续误报
+    const errorsLast5Min = stats.last5Min;
 
     if (errorsLast5Min > config.errorRateCrit) {
       return {
