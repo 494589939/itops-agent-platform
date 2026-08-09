@@ -13,6 +13,7 @@ import type { Socket } from 'socket.io-client';
 import io from 'socket.io-client';
 
 import { useAuth } from '../../../contexts/AuthContext';
+import ResizableTitle from '../components/ResizableTitle';
 
 interface ContainerStats {
   containerId: string;
@@ -172,11 +173,19 @@ export default function ContainerMonitor() {
     return `${bytes} B`;
   };
 
+  // 列宽状态（鼠标拖拽调整）
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  const widthOf = (key: string, def: number) => colWidths[key] || def;
+  const setColWidth = (key: string) => (w: number) => setColWidths(prev => ({ ...prev, [key]: w }));
+
   const columns = [
     {
       title: '容器名',
       dataIndex: 'name',
       key: 'name',
+      width: widthOf('name', 220),
+      ellipsis: true,
+      onHeaderCell: () => ({ width: widthOf('name', 220), onWidthChange: setColWidth('name') }),
       render: (text: string, record: Container) => (
         <Tooltip title={record.container_id}>
           <span className="font-medium">{text}</span>
@@ -187,13 +196,17 @@ export default function ContainerMonitor() {
       title: '镜像',
       dataIndex: 'image',
       key: 'image',
+      width: widthOf('image', 220),
       ellipsis: true,
+      onHeaderCell: () => ({ width: widthOf('image', 220), onWidthChange: setColWidth('image') }),
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
+      width: widthOf('status', 100),
+      ellipsis: true,
+      onHeaderCell: () => ({ width: widthOf('status', 100), onWidthChange: setColWidth('status') }),
       render: (status: string) => (
         <Tag color={statusColors[status] || 'default'}>{status}</Tag>
       ),
@@ -201,7 +214,8 @@ export default function ContainerMonitor() {
     {
       title: 'CPU',
       key: 'cpu',
-      width: 180,
+      width: widthOf('cpu', 180),
+      onHeaderCell: () => ({ width: widthOf('cpu', 180), onWidthChange: setColWidth('cpu') }),
       render: (_: unknown, record: Container) => {
         const stats = containerStatsMap.get(record.id);
         const cpu = parseFloat(stats?.cpuPercent || '0');
@@ -218,7 +232,8 @@ export default function ContainerMonitor() {
     {
       title: '内存',
       key: 'memory',
-      width: 200,
+      width: widthOf('memory', 200),
+      onHeaderCell: () => ({ width: widthOf('memory', 200), onWidthChange: setColWidth('memory') }),
       render: (_: unknown, record: Container) => {
         const stats = containerStatsMap.get(record.id);
         const mem = stats?.memory;
@@ -239,7 +254,8 @@ export default function ContainerMonitor() {
     {
       title: '网络 I/O',
       key: 'network',
-      width: 160,
+      width: widthOf('network', 160),
+      onHeaderCell: () => ({ width: widthOf('network', 160), onWidthChange: setColWidth('network') }),
       render: (_: unknown, record: Container) => {
         const stats = containerStatsMap.get(record.id);
         const net = stats?.network;
@@ -256,7 +272,8 @@ export default function ContainerMonitor() {
     {
       title: '操作',
       key: 'actions',
-      width: 240,
+      width: widthOf('actions', 240),
+      onHeaderCell: () => ({ width: widthOf('actions', 240), onWidthChange: setColWidth('actions') }),
       render: (_: unknown, record: Container) => {
         const isMonitoring = monitoredIds.has(record.id);
         return (
@@ -409,8 +426,11 @@ export default function ContainerMonitor() {
           dataSource={data}
           rowKey="id"
           loading={loading}
+          // 自定义表头 cell：支持鼠标拖拽调整列宽
+          components={{ header: { cell: ResizableTitle } }}
           pagination={{ pageSize: 15, showSizeChanger: true, showTotal: (total) => `共 ${total} 个容器` }}
-          scroll={{ x: 1100 }}
+          // 宽度随内容自适应（max-content），内容超宽时出现横向滚动条
+          scroll={{ x: 'max-content' }}
         />
       </Card>
 
