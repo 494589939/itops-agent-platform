@@ -78,7 +78,8 @@ describe('dcRepository', () => {
       });
 
       dcRepository.rooms.create({ id: 'r1', name: 'room1' });
-      expect(runSpy).toHaveBeenCalledWith('r1', 'room1', '', '', 20, 15, 0);
+      // 2026-08-09 更新：create 已扩展环境字段（current_temperature/current_humidity/pue/env_manual），共 11 个参数
+      expect(runSpy).toHaveBeenCalledWith('r1', 'room1', '', '', 20, 15, 0, null, null, null, 0);
     });
   });
 

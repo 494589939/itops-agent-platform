@@ -117,6 +117,8 @@ const { mockDb, state } = vi.hoisted(() => {
 
       return { get, all, run };
     }),
+    // 模拟 better-sqlite3 transaction(fn) → 返回同步函数，立即执行 fn
+    transaction: vi.fn((fn: (...args: unknown[]) => unknown) => (...args: unknown[]) => fn(...args)),
   };
 
   return { mockDb, state };
