@@ -1,49 +1,32 @@
 # ITOps Agent Platform
 
-Enterprise IT Operations Multi-Agent Automation Platform powered by Large Language Models.
+基于大语言模型的 IT 运维多 Agent 自动化平台。
 
 [![License](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](../LICENSE)
 
-## 🌐 Overview
+## 功能特性
 
-ITOps Agent Platform is an enterprise-grade IT operations automation platform where multiple AI agents work together through visual workflows to handle alert processing, fault diagnosis, system inspection, compliance checks, and more.
+- **多 Agent 协作**：内置 9 个运维 Agent，支持自定义
+- **可视化工作流编排**：拖拽式编辑器，支持串行/并行/条件分支
+- **服务器管理**：SSH 远程连接、命令执行、13 项合规检查
+- **告警中心**：支持 Prometheus/Zabbix Webhook 接入，自动降噪
+- **知识库 + RAG**：智能检索注入 LLM 上下文
+- **AI 助手**：自然语言对话式运维
+- **多模型支持**：豆包、OpenAI API 接入
+- **企业级安全**：AES-256-GCM 加密、JWT 认证、接口限流、审计日志
 
-**Features:**
-
-- **Multi-Agent Collaboration** - 9 preset operation agents with custom agent support
-- **Visual Workflow Orchestration** - Drag-and-drop editor with serial/parallel/conditional branches
-- **Server Management** - SSH remote connection, command execution, 13 compliance checks
-- **Alert Center** - Webhook integration for Prometheus/Zabbix, automatic noise reduction
-- **Knowledge Base + RAG** - Smart retrieval injected into LLM context
-- **AI Copilot** - Natural language conversational operations assistant
-- **Multi-LLM Support** - Doubao and OpenAI API integration
-- **Enterprise Security** - AES-256-GCM encryption, JWT auth, rate limiting, audit logs
-
-## 📦 Available Images
-
-### Backend API Server
+## 镜像拉取
 
 ```bash
-# Latest tag (Always pull the newest version)
+# 后端 API
 docker pull registry.cn-hangzhou.aliyuncs.com/huluwa666/tsq-images-hub:IT_Onlin-ITOps-backend-latest
-```
-
-### Frontend Web UI
-
-```bash
-# Latest tag (Always pull the newest version)
+# 前端 Web
 docker pull registry.cn-hangzhou.aliyuncs.com/huluwa666/tsq-images-hub:IT_Onlin-ITOps-frontend-latest
 ```
 
-## 🚀 Quick Start
-
-### Using Docker Compose (Recommended)
-
-Create a `docker-compose.yml` file:
+## 快速开始（Docker Compose）
 
 ```yaml
-version: '3.8'
-
 services:
   backend:
     image: registry.cn-hangzhou.aliyuncs.com/huluwa666/tsq-images-hub:IT_Onlin-ITOps-backend-latest
@@ -73,42 +56,17 @@ volumes:
     driver: local
 ```
 
-Then run:
+启动：
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-### Using Docker Run
+## 配置说明
 
-**Backend:**
+**所有业务配置均通过前端 UI 管理，无需 `.env` 文件。**
 
-```bash
-docker run -d \
-  --name itops-backend \
-  -p 3001:3001 \
-  -e NODE_ENV=production \
-  -v itops-data:/app/data \
-  registry.cn-hangzhou.aliyuncs.com/huluwa666/tsq-images-hub:IT_Onlin-ITOps-backend-latest
-```
-
-**Frontend:**
-
-```bash
-docker run -d \
-  --name itops-frontend \
-  -p 8080:80 \
-  --link itops-backend \
-  registry.cn-hangzhou.aliyuncs.com/huluwa666/tsq-images-hub:IT_Onlin-ITOps-frontend-latest
-```
-
-## ⚙️ Configuration
-
-### 配置方式
-
-**本项目所有配置通过前端 UI 管理，不需要环境变量文件（.env）。**
-
-部署完成后，在 Web 界面中进行配置：
+部署完成后在 Web 界面配置：
 
 | 配置项   | 位置                          | 说明                         |
 | -------- | ----------------------------- | ---------------------------- |
@@ -117,106 +75,47 @@ docker run -d \
 | 通知渠道 | `/notification-settings` 页面 | 企业微信/飞书/钉钉等         |
 | 告警源   | `/alert-providers` 页面       | Prometheus/Zabbix 等 Webhook |
 
-### Environment Variables（仅基础配置）
+仅以下基础配置支持环境变量：
 
-仅以下基础配置可通过环境变量设置，业务配置全部通过 UI 管理：
+| 变量              | 说明                                   | 默认值                  |
+| ----------------- | -------------------------------------- | ----------------------- |
+| `NODE_ENV`        | 运行环境                               | `production`            |
+| `PORT`            | 后端端口                               | `3001`                  |
+| `DATABASE_PATH`   | SQLite 数据库路径                      | `/app/data/app.db`      |
+| `JWT_SECRET`      | JWT 签名密钥（可选，不设则自动生成）   | 自动生成并持久化        |
+| `JWT_EXPIRES_IN`  | Token 有效期                           | `24h`                   |
+| `ALLOWED_ORIGINS` | CORS 允许来源                          | `http://localhost:8080` |
 
-| Variable          | Description                             | Default                 |
-| ----------------- | --------------------------------------- | ----------------------- |
-| `NODE_ENV`        | Runtime environment                     | `production`            |
-| `PORT`            | Backend API port                        | `3001`                  |
-| `DATABASE_PATH`   | SQLite database path                    | `/app/data/app.db`      |
-| `JWT_SECRET`      | JWT signing key（可选，不设则自动生成） | 自动生成并持久化        |
-| `JWT_EXPIRES_IN`  | Token expiration time                   | `24h`                   |
-| `ALLOWED_ORIGINS` | CORS allowed origins                    | `http://localhost:8080` |
+## 文档
 
-## 📚 Documentation
+- 项目文档：[`docs/`](../docs/)
+- 架构文档：[TECH_ARCHITECTURE.md](../.trae/documents/TECH_ARCHITECTURE.md)
+- API 文档：启动后访问 `/api/v1/docs`
 
-- **项目根目录文档：** [`docs/`](../docs/)
-- **架构文档：** [TECH_ARCHITECTURE.md](../.trae/documents/TECH_ARCHITECTURE.md)
-- **架构规则：** [architecture.md](../.trae/rules/architecture.md)
-- **API 文档：** 启动后访问 `/api/v1/docs`
-- **部署指南：** [`docs/`](../docs/)
-
-## 🔧 Building from Source
+## 源码构建
 
 ```bash
-# Clone repository
-git clone https://github.com/qinshihu/itops-agent-platform.git
-cd ITOpsAgent
-
-# Build images
 docker build -f docker/Dockerfile.backend -t itops-backend:latest .
 docker build -f docker/Dockerfile.frontend -t itops-frontend:latest .
-
-# Start with docker-compose
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
-## 🎯 Usage
+## 使用说明
 
-1. Access the frontend at `http://localhost:8080`
-2. Login with default admin credentials:
-   - **Username:** `admin`
-   - **Password:** `admin`
-   - ⚠️ Password must be changed on first login
-3. Configure your LLM API keys in Settings
-4. Create agents, workflows, and start automating!
+1. 访问前端 `http://localhost:8080`
+2. 默认账号登录：`admin` / `admin`（⚠️ 首次登录请修改密码）
+3. 在设置中配置 LLM API Key
+4. 创建 Agent 与工作流，开始自动化运维
 
-## 🏗️ Architecture
+## 安全设计
 
-```
-┌─────────────┐
-│   Browser   │
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│   Nginx     │ (Frontend Container - Port 8080)
-│  Static UI  │
-└──────┬──────┘
-       │ Proxy API /api/*
-┌──────▼──────┐
-│   Express   │ (Backend Container - Port 3001)
-│   API Server│
-└──┬───┬───┬──┘
-   │   │   │
-┌──▼─┐┌▼──┐┌▼─────┐
-│SQLite││LLM││SSH   │
-│  DB  ││API││Servers│
-└──────┘└───┘└──────┘
-```
+- 服务器密码与 SSH 密钥 AES-256-GCM 加密存储
+- JWT 认证 + Token 黑名单
+- 接口限流
+- 完整审计日志
+- 敏感信息脱敏
+- 容器内非 root 用户运行
 
-## 🔒 Security
-
-- Server passwords and SSH keys encrypted with AES-256-GCM
-- JWT authentication with token blacklist
-- API rate limiting
-- Complete audit logging
-- Sensitive information masking
-- Non-root container user execution
-
-## 📝 License
+## License
 
 [MPL-2.0](../LICENSE) © 谭策
-
-## 👤 Author
-
-**谭策** - Independent Developer | AIOps Explorer
-
-- 🌐 Website: [ITOpsAgentinfo](https://www.zjzwfw.cloud/ITOpsAgentinfo)
-- 📧 Email: [huawei_network@foxmail.com](mailto:huawei_network@foxmail.com)
-- 💬 WeChat: IT Online
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## ⭐ Show Your Support
-
-Give a ⭐ if this project helped you!
