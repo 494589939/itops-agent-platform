@@ -90,6 +90,11 @@ export function ServerFormModal({
   const suggestions = filteredTagSuggestions();
   const currentTags = parseCurrentTags();
 
+  // 分组：展平嵌套树（children 展开），排除根分组"全部服务器"（parent_id 为 null）
+  const flattenGroups = (nodes: Array<{ id: string; name: string; parent_id?: string | null; children?: unknown[] }>): Array<{ id: string; name: string; parent_id?: string | null }> =>
+    (nodes || []).flatMap((g) => [g, ...(g.children ? flattenGroups(g.children as never) : [])]);
+  const selectableGroups = flattenGroups(groupsData || []).filter((g) => g.parent_id != null);
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div className="bg-surface rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
@@ -275,31 +280,29 @@ export function ServerFormModal({
 
           <div className="pt-2 border-t border-border">
             <h4 className="text-sm font-medium text-text-primary mb-3">分组（可多选）</h4>
-            {groupsData && groupsData.filter((g) => g.parent_id !== null).length > 0 ? (
+            {selectableGroups.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {groupsData
-                  .filter((g) => g.parent_id !== null)
-                  .map((g) => {
-                    const checked = selectedGroupIds.includes(g.id);
-                    return (
-                      <button
-                        key={g.id}
-                        type="button"
-                        onClick={() =>
-                          onSelectedGroupIdsChange(
-                            checked
-                              ? selectedGroupIds.filter((id) => id !== g.id)
-                              : [...selectedGroupIds, g.id],
-                          )
-                        }
-                        className={checked
-                          ? 'px-3 py-1.5 rounded-full text-sm bg-blue-600 text-white border border-blue-600'
-                          : 'px-3 py-1.5 rounded-full text-sm bg-background border border-border text-text-secondary hover:border-blue-500/50 hover:text-text-primary transition-colors'}
-                      >
-                        {checked ? '✓ ' : ''}{g.name}
-                      </button>
-                    );
-                  })}
+                {selectableGroups.map((g) => {
+                  const checked = selectedGroupIds.includes(g.id);
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() =>
+                        onSelectedGroupIdsChange(
+                          checked
+                            ? selectedGroupIds.filter((id) => id !== g.id)
+                            : [...selectedGroupIds, g.id],
+                        )
+                      }
+                      className={checked
+                        ? 'px-3 py-1.5 rounded-full text-sm bg-blue-600 text-white border border-blue-600'
+                        : 'px-3 py-1.5 rounded-full text-sm bg-background border border-border text-text-secondary hover:border-blue-500/50 hover:text-text-primary transition-colors'}
+                    >
+                      {checked ? '✓ ' : ''}{g.name}
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-xs text-text-tertiary">

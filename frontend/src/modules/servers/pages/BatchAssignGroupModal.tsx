@@ -8,6 +8,7 @@ interface GroupOption {
   id: string;
   name: string;
   parent_id?: string | null;
+  children?: GroupOption[];
 }
 
 interface BatchAssignGroupModalProps {
@@ -33,8 +34,11 @@ export default function BatchAssignGroupModal({
 
   if (!open) return null;
 
-  // 展示分组（排除根分组"全部服务器"）
-  const groups = (groupsData || []).filter((g) => g.parent_id !== null);
+  // 展示分组：展平嵌套树（children 展开），排除根分组"全部服务器"（parent_id 为 null）
+  const flattenGroups = (nodes: GroupOption[]): GroupOption[] =>
+    (nodes || []).flatMap((g) => [g, ...(g.children ? flattenGroups(g.children) : [])]);
+  const allGroups = flattenGroups(groupsData as GroupOption[]);
+  const groups = allGroups.filter((g) => g.parent_id != null);
 
   const handleSubmit = async () => {
     if (!selectedGroupId) { toast.error('请选择分组'); return; }
