@@ -88,10 +88,32 @@ export default function ContainerMonitor() {
         ? containerPayload
         : (containerPayload?.items ?? []);
       setData(containerList);
-      setClusterStats((snapRes.data?.data ?? snapRes.data) || {
+
+      const snap = snapRes.data?.data ?? snapRes.data;
+      setClusterStats(snap || {
         totalContainers: 0, runningContainers: 0, totalCpuPercent: '0',
         totalMemoryUsage: 0, totalMemoryLimit: 0, totalMemoryPercent: '0',
       });
+      // 用集群快照返回的容器实时统计填充列表指标：
+      // 进入页面即可看到 CPU/内存/网络，无需先手动点"开始监控"
+      if (snap?.containers && Array.isArray(snap.containers)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const map = new Map<string, ContainerStats>();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        snap.containers.forEach((item: any) => {
+          if (!item?.id) return;
+          map.set(item.id, {
+            containerId: item.id,
+            name: item.name || '',
+            cpuPercent: item.cpuPercent ?? '0',
+            memory: item.memory ?? { usage: 0, limit: 0, percent: '0' },
+            network: item.network,
+            pids: item.pids ?? 0,
+            timestamp: item.timestamp || '',
+          });
+        });
+        setContainerStatsMap(map);
+      }
     } catch {
       message.error('加载失败');
     } finally {

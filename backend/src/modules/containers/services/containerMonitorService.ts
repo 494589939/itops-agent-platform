@@ -81,6 +81,10 @@ class ContainerMonitorService {
         .slice(0, 50) // 限制并发
         .map(async (c) => {
           try {
+            // 双采样（间隔 250ms）：第一次建立 CPU 基准，第二次返回带差值的真实统计
+            // （单次采样时 Docker precpu_stats 等于当前值，CPU 恒为 0）
+            await dockerService.getContainerStats(c.id);
+            await new Promise(resolve => setTimeout(resolve, 250));
             const stats = await dockerService.getContainerStats(c.id);
             return { id: c.id, name: c.name, ...stats };
           } catch { return null; }

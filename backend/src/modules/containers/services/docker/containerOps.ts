@@ -168,26 +168,44 @@ export async function collectContainerLogs(
   });
 }
 
+// Docker 单次采样(stream:false)返回的 precpu_stats 等于当前 cpu_stats，
+// 无法直接计算瞬时 CPU；需在服务端维护每次采样的 CPU 基准做差值。
+const cpuBaseline = new Map<string, { cpuUsage: number; systemUsage: number }>();
+
 export async function impl_getContainerStats(service: DS, id: string): Promise<DockerContainerStats> {
   if (!service.initialized) throw new Error('Docker service not available');
   
   const container = service.docker.getContainer(id);
   const stats = await container.stats({ stream: false });
   
-  // 计算 CPU 使用率（防御 systemDelta=0 / precpu 缺失 / online_cpus 缺失 → NaN、Infinity）
-  const cpuDelta =
-    (stats.cpu_stats?.cpu_usage?.total_usage ?? 0) -
-    (stats.precpu_stats?.cpu_usage?.total_usage ?? 0);
-  const systemDelta =
-    (stats.cpu_stats?.system_cpu_usage ?? 0) -
-    (stats.precpu_stats?.system_cpu_usage ?? 0);
+  // 计算 CPU 使用率：用本次与上次采样的差值（precpu_stats 在 stream=false 时恒等于当前值，不可用）
+  const cpuUsage = stats.cpu_stats?.cpu_usage?.total_usage ?? 0;
+  const systemUsage = stats.cpu_stats?.system_cpu_usage ?? 0;
   const onlineCpus = stats.cpu_stats?.online_cpus ?? 1;
-  const cpuPercent = systemDelta > 0 ? (cpuDelta / systemDelta) * onlineCpus * 100 : 0;
+  const prev = cpuBaseline.get(id);
+  let cpuPercent = 0;
+  // 容器重启时 total_usage 会变小（清零重计），此时重置基准
+  if (prev && cpuUsage >= prev.cpuUsage && systemUsage > prev.systemUsage) {
+    const cpuDelta = cpuUsage - prev.cpuUsage;
+    const systemDelta = systemUsage - prev.systemUsage;
+    cpuPercent = systemDelta > 0 ? (cpuDelta / systemDelta) * onlineCpus * 100 : 0;
+  }
+  cpuBaseline.set(id, { cpuUsage, systemUsage });
 
   // 计算内存使用（防御 memoryLimit=0 → Infinity）
   const memoryUsage = (stats.memory_stats?.usage ?? 0) - (stats.memory_stats?.stats?.cache || 0);
   const memoryLimit = stats.memory_stats?.limit ?? 0;
   const memoryPercent = memoryLimit > 0 ? (memoryUsage / memoryLimit) * 100 : 0;
+
+  // 网络 I/O 汇总：dockerode 返回 { eth0: {rx_bytes, tx_bytes}, ... } → 前端需要 { rx_bytes, tx_bytes }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const networks = (stats.networks || {}) as Record<string, { rx_bytes?: number; tx_bytes?: number }>;
+  let rxBytes = 0;
+  let txBytes = 0;
+  for (const iface of Object.values(networks)) {
+    rxBytes += iface?.rx_bytes || 0;
+    txBytes += iface?.tx_bytes || 0;
+  }
   
   return {
     cpuPercent: cpuPercent.toFixed(2),
@@ -196,7 +214,7 @@ export async function impl_getContainerStats(service: DS, id: string): Promise<D
       limit: memoryLimit,
       percent: memoryPercent.toFixed(2),
     },
-    network: stats.networks,
+    network: { rx_bytes: rxBytes, tx_bytes: txBytes },
     pids: stats.pids_stats?.current || 0,
     read: stats.read,
   };
