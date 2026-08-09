@@ -85,10 +85,36 @@ router.post('/', validateBody(alertCreateSchemas.createAlert), async (req: Reque
   }
 });
 
+// ── 批量操作（全选后统一确认/解决）──
+router.post('/batch/acknowledge', requireRole('admin', 'operator'), (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body as { ids?: string[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'ids 数组必填' });
+    }
+    const result = alertCrudService.batchAcknowledge(ids);
+    res.json({ success: true, data: { updated: result } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to batch acknowledge' });
+  }
+});
+
+router.post('/batch/resolve', requireRole('admin', 'operator'), (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body as { ids?: string[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'ids 数组必填' });
+    }
+    const result = alertCrudService.batchResolve(ids);
+    res.json({ success: true, data: { updated: result } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to batch resolve' });
+  }
+});
+
 router.put('/:id/acknowledge', validateParams(alertSchemas.alertId), (req: Request, res: Response) => {
   try {
-    const result = alertCrudService.acknowledgeAlertWithNotification(req.params.id);
-    if (!result.success) {
+    const result = alertCrudService.acknowledgeAlertWithNotification(req.params.id);    if (!result.success) {
       const status = result.error === 'not_found' ? 404 : 500;
       return res.status(status).json({
         success: false,

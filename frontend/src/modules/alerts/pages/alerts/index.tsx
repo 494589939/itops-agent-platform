@@ -18,15 +18,35 @@ export default function Alerts() {
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  // 设备类型（source）筛选
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+  // 时间区间筛选（默认当天，避免杂乱）
+  const today = new Date().toISOString().slice(0, 10);
+  const [dateFrom, setDateFrom] = useState<string>(today);
+  const [dateTo, setDateTo] = useState<string>(today);
+  // 批量选择
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
   const [automationLogAlert, setAutomationLogAlert] = useState<Alert | null>(null);
   const [processResult, setProcessResult] = useState<ProcessResult | null>(null);
 
   const { data: alerts, refetch } = useQuery({
-    queryKey: ['alerts', statusFilter, severityFilter],
+    queryKey: ['alerts', statusFilter, severityFilter, sourceFilter, dateFrom, dateTo],
     queryFn: async () => {
       const params: Record<string, string> = {};
       if (statusFilter !== 'all') params.status = statusFilter;
       if (severityFilter !== 'all') params.severity = severityFilter;
+      if (sourceFilter !== 'all') params.source = sourceFilter;
+      if (dateFrom) params.dateFrom = dateFrom;
+      if (dateTo) params.dateTo = dateTo;
       const { data } = await api.get('/alerts', { params });
       return data as Alert[];
     },
@@ -95,6 +115,22 @@ export default function Alerts() {
     },
   });
 
+  // 批量确认 / 解决（全选后统一操作）
+  const batchAcknowledgeMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { data } = await api.post('/alerts/batch/acknowledge', { ids });
+      return data;
+    },
+    onSuccess: () => { clearSelection(); refetch(); },
+  });
+  const batchResolveMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { data } = await api.post('/alerts/batch/resolve', { ids });
+      return data;
+    },
+    onSuccess: () => { clearSelection(); refetch(); },
+  });
+
   return (
     <div className="h-full overflow-auto p-6">
       <div className="space-y-6">
@@ -150,6 +186,13 @@ export default function Alerts() {
             onSeverityChange={setSeverityFilter}
             statusFilter={statusFilter}
             onStatusChange={setStatusFilter}
+            sourceFilter={sourceFilter}
+            onSourceChange={setSourceFilter}
+            dateFrom={dateFrom}
+            onDateFromChange={setDateFrom}
+            dateTo={dateTo}
+            onDateToChange={setDateTo}
+            sources={Array.from(new Set((alerts || []).map((a) => a.source).filter(Boolean)))}
           />
           <AlertList
             alerts={serverSideFilteredAlerts}
@@ -160,6 +203,19 @@ export default function Alerts() {
             onResolve={(alertId) => resolveMutation.mutate(alertId)}
             navigate={(path) => navigate(path)}
             onViewAutomationLog={setAutomationLogAlert}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onSelectAll={() => {
+              setSelectedIds((prev) => {
+                const next = new Set(prev);
+                serverSideFilteredAlerts.forEach((a) => next.add(a.id));
+                return next;
+              });
+            }}
+            onClearSelection={clearSelection}
+            onBatchAcknowledge={() => batchAcknowledgeMutation.mutate(Array.from(selectedIds))}
+            onBatchResolve={() => batchResolveMutation.mutate(Array.from(selectedIds))}
+            batchPending={batchAcknowledgeMutation.isPending || batchResolveMutation.isPending}
           />
         </div>
       </div>

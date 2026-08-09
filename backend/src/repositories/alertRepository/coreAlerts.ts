@@ -20,6 +20,19 @@ export function getAll(filters: AlertFilters = {}): AlertRecord[] {
     conditions.push('severity = ?');
     params.push(filters.severity);
   }
+  if (filters.source) {
+    conditions.push('source = ?');
+    params.push(filters.source);
+  }
+  // 时间区间筛选：按天（dateFrom/dateTo 为 YYYY-MM-DD）
+  if (filters.dateFrom) {
+    conditions.push('date(created_at) >= ?');
+    params.push(filters.dateFrom);
+  }
+  if (filters.dateTo) {
+    conditions.push('date(created_at) <= ?');
+    params.push(filters.dateTo);
+  }
 
   let query = 'SELECT * FROM alerts';
   if (conditions.length > 0) {

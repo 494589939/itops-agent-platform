@@ -26,7 +26,7 @@ const VALID_STATUSES = ['new', 'acknowledged', 'resolved'] as const;
 // 2026-07-21 P0-8：替换原 require() 延迟加载模式
 import { rootCauseAnalysisService } from '../../ai/services/rca/rootCauseAnalysisService';
 import * as alertRepos from '../../../repositories';
-function parseFilters(query: { status?: string; severity?: string; limit?: string }): AlertFilters {
+function parseFilters(query: { status?: string; severity?: string; source?: string; dateFrom?: string; dateTo?: string; limit?: string }): AlertFilters {
   return {
     status: VALID_STATUSES.includes(query.status as 'new')
       ? (query.status as 'new' | 'acknowledged' | 'resolved')
@@ -34,6 +34,9 @@ function parseFilters(query: { status?: string; severity?: string; limit?: strin
     severity: VALID_SEVERITIES.includes(query.severity as 'critical')
       ? (query.severity as 'critical' | 'high' | 'medium' | 'low')
       : undefined,
+    source: query.source || undefined,
+    dateFrom: query.dateFrom || undefined,
+    dateTo: query.dateTo || undefined,
     limit: query.limit ? parseInt(query.limit, 10) : undefined,
   };
 }
@@ -51,7 +54,7 @@ export const alertCrudService = {
   /**
    * 列表查询，自动校验 status/severity/limit 参数
    */
-  listAlerts(query: { status?: string; severity?: string; limit?: string }): AlertRecord[] {
+  listAlerts(query: { status?: string; severity?: string; source?: string; dateFrom?: string; dateTo?: string; limit?: string }): AlertRecord[] {
     return alertRepository.getAll(parseFilters(query));
   },
 
@@ -239,13 +242,32 @@ export const alertCrudService = {
     return { success: true, alert };
   },
 
+  /** 批量确认（遍历单条确认逻辑，跳过已确认/已解决的） */
+  batchAcknowledge(ids: string[]): number {
+    let updated = 0;
+    for (const id of ids) {
+      const r = this.acknowledgeAlertWithNotification(id);
+      if (r.success) updated++;
+    }
+    return updated;
+  },
+
+  /** 批量解决 */
+  batchResolve(ids: string[]): number {
+    let updated = 0;
+    for (const id of ids) {
+      const r = this.resolveAlertWithNotification(id);
+      if (r.success) updated++;
+    }
+    return updated;
+  },
+
   /**
    * 确认告警 + 通知派发（P2-7 下沉，routes PUT /:id/acknowledge 应调用此方法）
    */
   acknowledgeAlertWithNotification(
     id: string,
-  ): { success: true; alert: AlertRecord } | { success: false; error: 'not_found' | string } {
-    const result = this.acknowledgeAlert(id);
+  ): { success: true; alert: AlertRecord } | { success: false; error: 'not_found' | string } {    const result = this.acknowledgeAlert(id);
     if (result.success) {
       notificationService
         .sendSystemNotification('告警已确认', `告警 "${result.alert.title}" 已确认处理`)

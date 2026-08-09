@@ -23,6 +23,14 @@ interface AlertListProps {
   onResolve: (alertId: string) => void;
   navigate: (path: string) => void;
   onViewAutomationLog: (alert: Alert) => void;
+  // 批量选择
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
+  onSelectAll: () => void;
+  onClearSelection: () => void;
+  onBatchAcknowledge: () => void;
+  onBatchResolve: () => void;
+  batchPending: boolean;
 }
 
 export default function AlertList({
@@ -34,6 +42,13 @@ export default function AlertList({
   onResolve,
   navigate,
   onViewAutomationLog,
+  selectedIds,
+  onToggleSelect,
+  onSelectAll,
+  onClearSelection,
+  onBatchAcknowledge,
+  onBatchResolve,
+  batchPending,
 }: AlertListProps) {
   if (alerts.length === 0) {
     return (
@@ -48,11 +63,40 @@ export default function AlertList({
   }
 
   return (
-    <div className="divide-y divide-border">
-      {alerts.map((alert) => (
-        <div key={alert.id} className="p-6 hover:bg-background/50 transition-all">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
+    <>
+      {/* 批量操作条 */}
+      <div className="px-6 py-3 border-b border-border flex items-center gap-3 bg-background/50 flex-wrap">
+        <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
+          <input
+            type="checkbox"
+            checked={alerts.length > 0 && alerts.every((a) => selectedIds.has(a.id))}
+            onChange={onSelectAll}
+            className="w-4 h-4 accent-blue-600 cursor-pointer"
+          />
+          全选
+        </label>
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-blue-400">已选 {selectedIds.size} 条</span>
+            <button onClick={onBatchAcknowledge} disabled={batchPending} className="px-3 py-1.5 text-xs rounded-lg bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 disabled:opacity-50 transition-colors">批量确认</button>
+            <button onClick={onBatchResolve} disabled={batchPending} className="px-3 py-1.5 text-xs rounded-lg bg-green-600/20 text-green-400 hover:bg-green-600/30 disabled:opacity-50 transition-colors">批量解决</button>
+            <button onClick={onClearSelection} className="px-3 py-1.5 text-xs rounded-lg text-text-secondary hover:text-text-primary transition-colors">取消选择</button>
+          </div>
+        )}
+      </div>
+
+      <div className="divide-y divide-border">
+        {alerts.map((alert) => (
+          <div key={alert.id} className="p-6 hover:bg-background/50 transition-all">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 flex items-start gap-3 min-w-0">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(alert.id)}
+                  onChange={() => onToggleSelect(alert.id)}
+                  className="w-4 h-4 accent-blue-600 mt-1 flex-shrink-0 cursor-pointer"
+                />
+                <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-2">
                 <span
                   className={clsx(
@@ -86,6 +130,7 @@ export default function AlertList({
                   {safeFormatDistance(alert.created_at)}
                 </span>
               </div>
+            </div>
             </div>
             <div className="flex gap-2 ml-4">
               {alert.status !== 'resolved' && (
@@ -174,6 +219,7 @@ export default function AlertList({
           </div>
         </div>
       ))}
-    </div>
+      </div>
+    </>
   );
 }

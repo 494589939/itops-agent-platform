@@ -4,6 +4,10 @@
 export interface AlertFilters {
   status?: 'new' | 'acknowledged' | 'resolved';
   severity?: 'critical' | 'high' | 'medium' | 'low';
+  source?: string;
+  /** 时间区间（YYYY-MM-DD，按 created_at 的日期比较） */
+  dateFrom?: string;
+  dateTo?: string;
   limit?: number;
 }
 
