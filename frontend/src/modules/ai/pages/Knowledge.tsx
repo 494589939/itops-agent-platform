@@ -18,6 +18,20 @@ interface Knowledge {
 
 const categories = ['故障案例', '最佳实践', '操作手册', '安全合规', '性能优化'];
 
+// 兼容知识条目 tags/solutions 的多种存储形态：数组 / JSON 字符串 / 对象{rootCause,commands}
+function toArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string');
+  if (typeof v === 'string') return v ? [v] : [];
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    const parts: string[] = [];
+    if (typeof o.rootCause === 'string') parts.push(o.rootCause);
+    if (Array.isArray(o.commands)) parts.push(...o.commands.map(String));
+    return parts;
+  }
+  return [];
+}
+
 export default function Knowledge() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -151,9 +165,9 @@ export default function Knowledge() {
                 {entry.content}
               </p>
 
-              {entry.tags && entry.tags.length > 0 && (
+              {toArray(entry.tags).length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {entry.tags.slice(0, 3).map((tag) => (
+                  {toArray(entry.tags).slice(0, 3).map((tag) => (
                     <span
                       key={tag}
                       className="px-2 py-1 bg-background rounded text-xs text-text-secondary flex items-center gap-1"
@@ -162,8 +176,8 @@ export default function Knowledge() {
                       {tag}
                     </span>
                   ))}
-                  {entry.tags.length > 3 && (
-                    <span className="text-xs text-text-secondary">+{entry.tags.length - 3}</span>
+                  {toArray(entry.tags).length > 3 && (
+                    <span className="text-xs text-text-secondary">+{toArray(entry.tags).length - 3}</span>
                   )}
                 </div>
               )}
@@ -258,9 +272,9 @@ export default function Knowledge() {
               </span>
             </div>
 
-            {showDetail.tags && showDetail.tags.length > 0 && (
+            {toArray(showDetail.tags).length > 0 && (
               <div className="flex flex-wrap gap-2 mb-6">
-                {showDetail.tags.map((tag, i) => (
+                {toArray(showDetail.tags).map((tag, i) => (
                   <span
                     key={i}
                     className="px-2 py-1 bg-background rounded text-xs text-text-secondary flex items-center gap-1"
@@ -280,11 +294,11 @@ export default function Knowledge() {
                 </div>
               </div>
 
-              {showDetail.solutions && showDetail.solutions.length > 0 && (
+              {toArray(showDetail.solutions).length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-text-secondary mb-2">解决方案</h3>
                   <ul className="space-y-2">
-                    {showDetail.solutions.map((solution, i) => (
+                    {toArray(showDetail.solutions).map((solution, i) => (
                       <li key={i} className="bg-background rounded-lg p-4">
                         <MarkdownOutput content={solution} />
                       </li>
@@ -314,9 +328,9 @@ function KnowledgeModal({ entry, onClose }: { entry: Knowledge | null; onClose: 
   const [formData, setFormData] = useState({
     title: entry?.title || '',
     category: entry?.category || '故障案例',
-    tags: entry?.tags?.join(', ') || '',
+    tags: toArray(entry?.tags).join(', ') || '',
     content: entry?.content || '',
-    solutions: entry?.solutions?.join('\n') || '',
+    solutions: toArray(entry?.solutions).join('\n') || '',
   });
 
   const mutation = useMutation({
