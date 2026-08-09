@@ -304,7 +304,7 @@ export function ServerListSection({
                           type="checkbox"
                           checked={batchSelectedIds.has(server.id)}
                           onChange={() => onToggleBatchSelect(server.id)}
-                          className="w-4 h-4 accent-blue-600 cursor-pointer"
+                          className="w-5 h-5 accent-blue-600 cursor-pointer"
                         />
                       </label>
                       <div

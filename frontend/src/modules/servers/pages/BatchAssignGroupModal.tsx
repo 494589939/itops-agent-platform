@@ -29,7 +29,7 @@ export default function BatchAssignGroupModal({
   onFinished,
 }: BatchAssignGroupModalProps) {
   const toast = useToast();
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   if (!open) return null;
@@ -41,15 +41,20 @@ export default function BatchAssignGroupModal({
   const groups = allGroups.filter((g) => g.parent_id != null);
 
   const handleSubmit = async () => {
-    if (!selectedGroupId) { toast.error('请选择分组'); return; }
+    if (selectedGroupIds.length === 0) { toast.error('请至少选择一个分组'); return; }
     setSubmitting(true);
     try {
-      const { data } = await api.post('/server-groups/mapping', {
-        server_ids: serverIds,
-        group_id: selectedGroupId,
-      });
-      toast.success(`已将 ${data?.added ?? serverIds.length} 台服务器加入分组`);
-      setSelectedGroupId('');
+      let total = 0;
+      // 多选分组：逐个分组批量添加（幂等，同一服务器可在多个分组）
+      for (const gid of selectedGroupIds) {
+        const { data } = await api.post('/server-groups/mapping', {
+          server_ids: serverIds,
+          group_id: gid,
+        });
+        total += data?.added ?? serverIds.length;
+      }
+      toast.success(`已将 ${serverIds.length} 台服务器加入 ${selectedGroupIds.length} 个分组`);
+      setSelectedGroupIds([]);
       onFinished();
       onClose();
     } catch (err) {
@@ -81,23 +86,34 @@ export default function BatchAssignGroupModal({
             <label className="block text-sm font-medium text-text-primary mb-2">选择分组</label>
             {groups.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {groups.map((g) => (
-                  <button
-                    key={g.id}
-                    onClick={() => setSelectedGroupId(g.id)}
-                    className={clsx(
-                      'px-3 py-1.5 rounded-full text-sm transition-colors',
-                      selectedGroupId === g.id
-                        ? 'bg-blue-600 text-white border border-blue-600'
-                        : 'bg-background border border-border text-text-secondary hover:border-blue-500/50 hover:text-text-primary',
-                    )}
-                  >
-                    {selectedGroupId === g.id ? '✓ ' : ''}{g.name}
-                  </button>
-                ))}
+                {groups.map((g) => {
+                  const checked = selectedGroupIds.includes(g.id);
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() =>
+                        setSelectedGroupIds(checked
+                          ? selectedGroupIds.filter((id) => id !== g.id)
+                          : [...selectedGroupIds, g.id])
+                      }
+                      className={clsx(
+                        'px-3 py-1.5 rounded-full text-sm transition-colors',
+                        checked
+                          ? 'bg-blue-600 text-white border border-blue-600'
+                          : 'bg-background border border-border text-text-secondary hover:border-blue-500/50 hover:text-text-primary',
+                      )}
+                    >
+                      {checked ? '✓ ' : ''}{g.name}
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-xs text-text-tertiary">暂无分组，请先创建分组</p>
+            )}
+            {selectedGroupIds.length > 0 && (
+              <p className="text-xs text-blue-400 mt-2">已选 {selectedGroupIds.length} 个分组，可多选</p>
             )}
           </div>
         </div>
@@ -112,7 +128,7 @@ export default function BatchAssignGroupModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={submitting || !selectedGroupId}
+            disabled={submitting || selectedGroupIds.length === 0}
             className="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white transition-all font-medium flex items-center gap-2"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
