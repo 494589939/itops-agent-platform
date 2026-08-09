@@ -1,6 +1,4 @@
-[English](README.en.md) | [中文](README.md) | [繁體中文](README.tw.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [Deutsch](README.de.md) | [Français](README.fr.md)
-
----
+﻿---
 
 **项目正基于 4A 架构框架与 DDD 领域驱动设计进行全面重构。本次重构旨在彻底解耦业务逻辑与技术实现，重塑架构合理性，在提升代码可维护性与规范性的同时，赋予系统更强的弹性扩展能力。**
 
