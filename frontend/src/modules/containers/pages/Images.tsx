@@ -11,10 +11,16 @@ import api from '../../../lib/api';
 export interface Image {
   id: string;
   name: string;
+  /** 后端 normalizeImage 返回的仓库名（RepoTags[0] 去掉 tag） */
+  repository?: string;
   tag?: string;
   size_bytes?: number;
+  /** 后端 normalizeImage 的 size（字节） */
+  size?: number;
   host?: string;
   created_at?: string;
+  /** 后端 normalizeImage 的创建时间（秒级时间戳） */
+  created?: number;
   [key: string]: unknown;
 }
 
@@ -116,8 +122,8 @@ export default function Images() {
     let dbCount = 0;
     let mwCount = 0;
     for (const img of data) {
-      totalSize += img.size_bytes || 0;
-      const n = (img.name + ' ' + (img.tag || '')).toLowerCase();
+      totalSize += img.size ?? img.size_bytes ?? 0;
+      const n = ((img.repository || img.name) + ' ' + (img.tag || '')).toLowerCase();
       if (/(mysql|mariadb|postgres|postgresql|mongo|mongodb|redis|clickhouse|influxdb|elasticsearch|kafka|rabbitmq)/.test(n)) {
         dbCount++;
       } else if (/(nginx|apache|httpd|caddy|traefik|haproxy|node|python|java|openjdk|grafana|prometheus)/.test(n)) {
@@ -151,9 +157,10 @@ export default function Images() {
       title: '名称',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string, record: Image) => (
+      // 后端 normalizeImage 返回 repository（镜像仓库名），兼容 name 字段
+      render: (_: string, record: Image) => (
         <Tooltip title={record.id}>
-          <span className="font-medium text-text-primary">{name || '(unnamed)'}</span>
+          <span className="font-medium text-text-primary">{record.repository || record.name || '(unnamed)'}</span>
         </Tooltip>
       ),
     },
@@ -163,18 +170,18 @@ export default function Images() {
       key: 'tag',
       width: 160,
       render: (t: string, record: Image) => (
-        <Tag color={tagColorForImage(record.name, t)} className="m-0">
+        <Tag color={tagColorForImage(record.repository || record.name, t)} className="m-0">
           {t || 'latest'}
         </Tag>
       ),
     },
     {
       title: '大小',
-      dataIndex: 'size_bytes',
+      dataIndex: 'size',
       key: 'size',
       width: 110,
-      render: (s: number) => (
-        <span className="text-text-secondary tabular-nums">{formatSize(s || 0)}</span>
+      render: (_: number, record: Image) => (
+        <span className="text-text-secondary tabular-nums">{formatSize(record.size ?? record.size_bytes ?? 0)}</span>
       ),
     },
     {
@@ -183,16 +190,22 @@ export default function Images() {
       key: 'host',
       width: 140,
       render: (h?: string) =>
-        h ? <Tag color={hostColor(h)} className="m-0">{h}</Tag> : <span className="text-text-secondary/60">—</span>,
+        h ? <Tag color={hostColor(h)} className="m-0">{h}</Tag> : <span className="text-text-secondary/60">本地</span>,
     },
     {
       title: '创建时间',
-      dataIndex: 'created_at',
+      dataIndex: 'created',
       key: 'created_at',
       width: 180,
-      render: (t?: string) => (
-        <span className="text-text-secondary tabular-nums text-xs">{t || '—'}</span>
-      ),
+      render: (_: string, record: Image) => {
+        // normalizeImage.created 为秒级时间戳
+        const ts = record.created ?? record.Created;
+        return (
+          <span className="text-text-secondary tabular-nums text-xs">
+            {ts ? new Date(Number(ts) * 1000).toLocaleString('zh-CN') : '—'}
+          </span>
+        );
+      },
     },
     {
       title: '操作',
