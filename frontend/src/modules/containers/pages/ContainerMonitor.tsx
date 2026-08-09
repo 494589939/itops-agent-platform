@@ -13,7 +13,7 @@ import type { Socket } from 'socket.io-client';
 import io from 'socket.io-client';
 
 import { useAuth } from '../../../contexts/AuthContext';
-import ResizableTitle from '../components/ResizableTitle';
+import ResizableHeader from '../components/ResizableHeader';
 
 interface ContainerStats {
   containerId: string;
@@ -180,12 +180,13 @@ export default function ContainerMonitor() {
 
   const columns = [
     {
-      title: '容器名',
+      title: (
+        <ResizableHeader title="容器名" width={widthOf('name', 220)} onWidthChange={setColWidth('name')} onReset={() => setColWidth('name')(220)} />
+      ),
       dataIndex: 'name',
       key: 'name',
       width: widthOf('name', 220),
       ellipsis: true,
-      onHeaderCell: () => ({ width: widthOf('name', 220), onWidthChange: setColWidth('name'), onReset: () => setColWidth('name')(220) }),
       render: (text: string, record: Container) => (
         <Tooltip title={record.container_id}>
           <span className="font-medium">{text}</span>
@@ -193,29 +194,32 @@ export default function ContainerMonitor() {
       ),
     },
     {
-      title: '镜像',
+      title: (
+        <ResizableHeader title="镜像" width={widthOf('image', 220)} onWidthChange={setColWidth('image')} onReset={() => setColWidth('image')(220)} />
+      ),
       dataIndex: 'image',
       key: 'image',
       width: widthOf('image', 220),
       ellipsis: true,
-      onHeaderCell: () => ({ width: widthOf('image', 220), onWidthChange: setColWidth('image'), onReset: () => setColWidth('image')(220) }),
     },
     {
-      title: '状态',
+      title: (
+        <ResizableHeader title="状态" width={widthOf('status', 100)} onWidthChange={setColWidth('status')} onReset={() => setColWidth('status')(100)} />
+      ),
       dataIndex: 'status',
       key: 'status',
       width: widthOf('status', 100),
       ellipsis: true,
-      onHeaderCell: () => ({ width: widthOf('status', 100), onWidthChange: setColWidth('status'), onReset: () => setColWidth('status')(100) }),
       render: (status: string) => (
         <Tag color={statusColors[status] || 'default'}>{status}</Tag>
       ),
     },
     {
-      title: 'CPU',
+      title: (
+        <ResizableHeader title="CPU" width={widthOf('cpu', 180)} onWidthChange={setColWidth('cpu')} onReset={() => setColWidth('cpu')(180)} />
+      ),
       key: 'cpu',
       width: widthOf('cpu', 180),
-      onHeaderCell: () => ({ width: widthOf('cpu', 180), onWidthChange: setColWidth('cpu'), onReset: () => setColWidth('cpu')(180) }),
       render: (_: unknown, record: Container) => {
         const stats = containerStatsMap.get(record.id);
         const cpu = parseFloat(stats?.cpuPercent || '0');
@@ -230,10 +234,11 @@ export default function ContainerMonitor() {
       },
     },
     {
-      title: '内存',
+      title: (
+        <ResizableHeader title="内存" width={widthOf('memory', 200)} onWidthChange={setColWidth('memory')} onReset={() => setColWidth('memory')(200)} />
+      ),
       key: 'memory',
       width: widthOf('memory', 200),
-      onHeaderCell: () => ({ width: widthOf('memory', 200), onWidthChange: setColWidth('memory'), onReset: () => setColWidth('memory')(200) }),
       render: (_: unknown, record: Container) => {
         const stats = containerStatsMap.get(record.id);
         const mem = stats?.memory;
@@ -252,10 +257,11 @@ export default function ContainerMonitor() {
       },
     },
     {
-      title: '网络 I/O',
+      title: (
+        <ResizableHeader title="网络 I/O" width={widthOf('network', 160)} onWidthChange={setColWidth('network')} onReset={() => setColWidth('network')(160)} />
+      ),
       key: 'network',
       width: widthOf('network', 160),
-      onHeaderCell: () => ({ width: widthOf('network', 160), onWidthChange: setColWidth('network'), onReset: () => setColWidth('network')(160) }),
       render: (_: unknown, record: Container) => {
         const stats = containerStatsMap.get(record.id);
         const net = stats?.network;
@@ -270,10 +276,11 @@ export default function ContainerMonitor() {
       },
     },
     {
-      title: '操作',
+      title: (
+        <ResizableHeader title="操作" width={widthOf('actions', 240)} onWidthChange={setColWidth('actions')} onReset={() => setColWidth('actions')(240)} />
+      ),
       key: 'actions',
       width: widthOf('actions', 240),
-      onHeaderCell: () => ({ width: widthOf('actions', 240), onWidthChange: setColWidth('actions'), onReset: () => setColWidth('actions')(240) }),
       render: (_: unknown, record: Container) => {
         const isMonitoring = monitoredIds.has(record.id);
         return (
@@ -426,8 +433,6 @@ export default function ContainerMonitor() {
           dataSource={data}
           rowKey="id"
           loading={loading}
-          // 自定义表头 cell：支持鼠标拖拽调整列宽
-          components={{ header: { cell: ResizableTitle } }}
           pagination={{ pageSize: 15, showSizeChanger: true, showTotal: (total) => `共 ${total} 个容器` }}
           // 宽度随内容自适应（max-content），内容超宽时出现横向滚动条
           scroll={{ x: 'max-content' }}

@@ -1,19 +1,18 @@
 import { useRef, useState } from 'react';
 
 /**
- * 可拖拽表头 cell（零依赖）：鼠标拖动表头右侧手柄调整列宽。
- * 用法：
- *   <Table components={{ header: { cell: ResizableTitle } }} ... />
- *   列定义需提供 width 与 onHeaderCell（返回 { width, onWidthChange, onReset? }）。
+ * 表头内容（标题 + 拖拽手柄）：渲染在 column.title 内部，不依赖 Table
+ * components 替换机制，任何 antd 版本/表格配置下都能正常拖拽。
+ * 拖动手柄调整列宽，双击恢复默认宽度。
  */
-interface ResizableTitleProps extends React.HTMLAttributes<HTMLTableCellElement> {
-  width?: number;
-  onWidthChange?: (width: number) => void;
-  /** 双击手柄重置为该默认宽度 */
+interface ResizableHeaderProps {
+  title: React.ReactNode;
+  width: number;
+  onWidthChange: (width: number) => void;
   onReset?: () => void;
 }
 
-export default function ResizableTitle({ width, onWidthChange, onReset, children, ...restProps }: ResizableTitleProps) {
+export default function ResizableHeader({ title, width, onWidthChange, onReset }: ResizableHeaderProps) {
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
   const draggingRef = useRef(false);
@@ -24,12 +23,12 @@ export default function ResizableTitle({ width, onWidthChange, onReset, children
     e.stopPropagation();
     draggingRef.current = true;
     startXRef.current = e.clientX;
-    startWidthRef.current = width || 100;
+    startWidthRef.current = width;
 
     const onMove = (ev: MouseEvent) => {
       if (!draggingRef.current) return;
-      const next = Math.max(60, startWidthRef.current + (ev.clientX - startXRef.current));
-      onWidthChange?.(Math.round(next));
+      const next = Math.max(60, Math.round(startWidthRef.current + (ev.clientX - startXRef.current)));
+      onWidthChange(next);
     };
     const onUp = () => {
       draggingRef.current = false;
@@ -42,9 +41,10 @@ export default function ResizableTitle({ width, onWidthChange, onReset, children
   };
 
   return (
-    <th {...restProps} style={{ position: 'relative', ...restProps.style }}>
-      {children}
-      {/* 拖拽手柄：骑在列右边缘（含相邻列分隔线区域），悬停高亮提示可拖 */}
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+        {title}
+      </span>
       <span
         onMouseDown={onDragStart}
         onDoubleClick={(e) => { e.stopPropagation(); onReset?.(); }}
@@ -52,15 +52,19 @@ export default function ResizableTitle({ width, onWidthChange, onReset, children
         onMouseLeave={() => setHover(false)}
         title="拖动调整列宽（双击恢复默认）"
         style={{
-          position: 'absolute', right: 0, top: 0, bottom: 0,
-          width: 14,
           cursor: 'col-resize',
           userSelect: 'none',
           touchAction: 'none',
-          zIndex: 30,
-          background: hover ? 'rgba(59, 130, 246, 0.25)' : 'transparent',
+          marginLeft: 6,
+          padding: '0 4px',
+          flexShrink: 0,
+          color: hover ? '#60a5fa' : 'rgba(128,128,128,0.5)',
+          fontSize: 12,
+          lineHeight: 1,
         }}
-      />
-    </th>
+      >
+        ↔
+      </span>
+    </div>
   );
 }
