@@ -64,6 +64,10 @@ export default function ContainerMonitor() {
   const [detailInspect, setDetailInspect] = useState<any>(null);
   const [monitoredIds, setMonitoredIds] = useState<Set<string>>(new Set());
   const [containerStatsMap, setContainerStatsMap] = useState<Map<string, ContainerStats>>(new Map());
+  // 分页（受控：切换每页条数会重新请求后端，避免“选 50 仍只显示旧条数”）
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const [total, setTotal] = useState(0);
   const socketRef = useRef<Socket | null>(null);
 
   // Initialize Socket.io
@@ -82,14 +86,15 @@ export default function ContainerMonitor() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. 先拉容器列表 → 立即渲染表格（不等慢速 stats）
-      const containerRes = await api.get('/containers');
+      // 1. 先拉容器列表（带分页参数）→ 立即渲染表格（不等慢速 stats）
+      const containerRes = await api.get('/containers', { params: { page, pageSize } });
       // API 可能返回数组或 { items: [...], total: N } 对象，统一提取为数组
       const containerPayload = containerRes.data?.data ?? containerRes.data;
       const containerList = Array.isArray(containerPayload)
         ? containerPayload
         : (containerPayload?.items ?? []);
       setData(containerList);
+      setTotal(typeof containerPayload?.total === 'number' ? containerPayload.total : containerList.length);
     } catch {
       message.error('加载失败');
     } finally {
@@ -130,6 +135,21 @@ export default function ContainerMonitor() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // 切换页码/每页条数：只刷新列表（不重复拉慢速集群快照）
+  useEffect(() => {
+    setLoading(true);
+    api
+      .get('/containers', { params: { page, pageSize } })
+      .then((res) => {
+        const payload = res.data?.data ?? res.data;
+        const list = Array.isArray(payload) ? payload : (payload?.items ?? []);
+        setData(list);
+        setTotal(typeof payload?.total === 'number' ? payload.total : list.length);
+      })
+      .catch(() => message.error('加载失败'))
+      .finally(() => setLoading(false));
+  }, [page, pageSize]);
 
   // Toggle monitoring
   const toggleMonitor = async (containerId: string, start: boolean) => {
@@ -436,7 +456,14 @@ export default function ContainerMonitor() {
           dataSource={data}
           rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 15, showSizeChanger: true, showTotal: (total) => `共 ${total} 个容器` }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showTotal: (t) => `共 ${t} 个容器`,
+            onChange: (p, ps) => { setPage(p); setPageSize(ps); },
+          }}
           // 宽度随内容自适应（max-content），内容超宽时出现横向滚动条
           scroll={{ x: 'max-content' }}
         />

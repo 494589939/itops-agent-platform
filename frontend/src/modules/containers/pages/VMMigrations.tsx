@@ -205,7 +205,7 @@ export default function VMMigrations() {
           rowKey="id"
           loading={isLoading}
           dataSource={filtered}
-          pagination={{ pageSize: 15, showSizeChanger: false }}
+          pagination={{ pageSize: 15, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
           locale={{ emptyText: <Empty description="暂无迁移任务" /> }}
           columns={[
             {
