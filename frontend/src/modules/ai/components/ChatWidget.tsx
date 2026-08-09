@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, Bot, User, Trash2, MessageSquare, Loader2, X, MinusCircle, AlertCircle } from 'lucide-react';
 import api from '../../../lib/api';
@@ -20,7 +21,48 @@ interface Conversation {
   updated_at?: Date | string;
 }
 
+interface QuickAction {
+  label: string;
+  to: string;
+}
+
+/**
+ * 从 AI 回复文本中识别实体，生成可跳转的快捷操作（最多 3 个，按优先级）
+ * - IP 地址 → 查看服务器
+ * - 容器/docker/镜像 → 容器模块
+ * - 告警 → 告警模块
+ * - 数据库 → 数据库连接
+ * - 服务器/资源指标 → 服务器列表
+ * - 巡检 → 巡检中心
+ */
+const extractQuickActions = (content: string): QuickAction[] => {
+  const actions: QuickAction[] = [];
+  const push = (a: QuickAction) => {
+    if (actions.length >= 3) return;
+    if (!actions.some((x) => x.to === a.to && x.label === a.label)) actions.push(a);
+  };
+
+  // IP 地址优先（具体服务器）
+  const ips = content.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) || [];
+  const seen = new Set<string>();
+  for (const ip of ips) {
+    if (seen.has(ip)) continue;
+    seen.add(ip);
+    push({ label: `查看服务器 ${ip}`, to: '/servers' });
+  }
+
+  if (/容器|docker|镜像/i.test(content)) push({ label: '查看容器', to: '/containers' });
+  if (/告警|报警|异常|告警事件/i.test(content)) push({ label: '查看告警', to: '/alerts' });
+  if (/数据库/i.test(content)) push({ label: '查看数据库', to: '/db-connections' });
+  if (/服务器|主机|CPU|内存|磁盘|网络|负载/i.test(content)) push({ label: '查看服务器', to: '/servers' });
+  if (/巡检/i.test(content)) push({ label: '巡检中心', to: '/inspection-center' });
+  if (/仪表盘|大屏|总览|资源监控/i.test(content)) push({ label: '查看仪表盘', to: '/dashboard' });
+
+  return actions;
+};
+
 export default function ChatWidget() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const toast = useToast();
   const { theme } = useTheme();
@@ -380,6 +422,28 @@ export default function ChatWidget() {
                               <MarkdownOutput content={msg.content} />
                             ) : (
                               <p className="text-sm">{msg.content}</p>
+                            )}
+                            {msg.role === 'assistant' && msg.content && (
+                              (() => {
+                                const actions = extractQuickActions(msg.content);
+                                if (actions.length === 0) return null;
+                                return (
+                                  <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-border/40">
+                                    {actions.map((a) => (
+                                      <button
+                                        key={`${a.to}-${a.label}`}
+                                        onClick={() => {
+                                          navigate(a.to);
+                                          setIsOpen(false);
+                                        }}
+                                        className="text-xs px-2.5 py-1 rounded-full border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/70 transition-all"
+                                      >
+                                        {a.label} ↗
+                                      </button>
+                                    ))}
+                                  </div>
+                                );
+                              })()
                             )}
                           </div>
                           {msg.role === 'user' && (

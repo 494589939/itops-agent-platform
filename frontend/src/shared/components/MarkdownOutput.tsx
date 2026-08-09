@@ -22,6 +22,10 @@ md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
     const href = token.attrs![hrefIndex][1];
     if (href.startsWith('javascript:') || href.startsWith('data:') || href.startsWith('vbscript:')) {
       token.attrs![hrefIndex][1] = '#';
+    } else {
+      // 外部链接新窗口打开，避免替换当前 SPA 页面
+      token.attrSet('target', '_blank');
+      token.attrSet('rel', 'noopener noreferrer');
     }
   }
   return self.renderToken(tokens, idx, options);
