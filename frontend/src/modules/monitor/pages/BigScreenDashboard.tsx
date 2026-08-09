@@ -94,6 +94,7 @@ export default function BigScreenDashboard() {
                 memoryData={data.memoryData}
                 networkData={data.networkData}
                 diskIOData={data.diskIOData}
+                isMockData={data.isServerMetricsMock}
               />
               <BigScreenRecentTasksList tasks={data.tasks} onViewAll={() => navigate('/tasks')} />
             </div>

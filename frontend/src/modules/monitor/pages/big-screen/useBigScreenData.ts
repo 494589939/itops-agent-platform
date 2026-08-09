@@ -490,6 +490,9 @@ export function useBigScreenData() {
     };
   });
 
+  // 资源监控是否有真实采集数据；无真实数据时前端展示随机模拟数据（UI 需明确标识）
+  const isServerMetricsMock = serverMetricsData ? !serverMetricsData.has_real_data : false;
+
   return {
     navigate,
     currentTime,
@@ -527,6 +530,7 @@ export function useBigScreenData() {
     remediationStats,
     slaStats,
     serverMetricsData,
+    isServerMetricsMock,
     selectedServerId,
     setSelectedServerId,
   };

@@ -15,6 +15,8 @@ export interface BigScreenTrendChartsProps {
   memoryData: DataPoint[];
   networkData: DataPoint[];
   diskIOData: DataPoint[];
+  /** 无真实采集数据时前端在用随机模拟数据，为 true 时显示“模拟数据”角标 */
+  isMockData?: boolean;
 }
 
 export default function BigScreenTrendCharts({
@@ -22,7 +24,15 @@ export default function BigScreenTrendCharts({
   memoryData,
   networkData,
   diskIOData,
+  isMockData = false,
 }: BigScreenTrendChartsProps) {
+  const MockBadge = () =>
+    isMockData ? (
+      <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 ml-2">
+        模拟数据
+      </span>
+    ) : null;
+
   return (
     <>
       {/* CPU + 内存趋势 */}
@@ -31,6 +41,7 @@ export default function BigScreenTrendCharts({
           <h3 className="text-sm font-semibold text-slate-400 mb-3 flex items-center gap-2">
             <Cpu className="w-4 h-4 text-blue-400" />
             CPU趋势
+            <MockBadge />
           </h3>
           <AnimatedLineChart data={cpuData} color="#3b82f6" height={120} />
         </div>
@@ -38,6 +49,7 @@ export default function BigScreenTrendCharts({
           <h3 className="text-sm font-semibold text-slate-400 mb-3 flex items-center gap-2">
             <MemoryStick className="w-4 h-4 text-purple-400" />
             内存趋势
+            <MockBadge />
           </h3>
           <AnimatedLineChart data={memoryData} color="#8b5cf6" height={120} />
         </div>
@@ -49,6 +61,7 @@ export default function BigScreenTrendCharts({
           <h3 className="text-sm font-semibold text-slate-400 mb-3 flex items-center gap-2">
             <Network className="w-4 h-4 text-cyan-400" />
             网络流量 (Mbps)
+            <MockBadge />
           </h3>
           <AnimatedLineChart data={networkData} color="#06b6d4" height={120} />
         </div>
@@ -56,6 +69,7 @@ export default function BigScreenTrendCharts({
           <h3 className="text-sm font-semibold text-slate-400 mb-3 flex items-center gap-2">
             <HardDrive className="w-4 h-4 text-yellow-400" />
             磁盘I/O (MB/s)
+            <MockBadge />
           </h3>
           <AnimatedLineChart data={diskIOData} color="#f59e0b" height={120} />
         </div>
