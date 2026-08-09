@@ -59,8 +59,19 @@ export function getClientIp(req: Request): string {
   if (typeof xff === 'string' && xff.trim()) {
     const first = xff.split(',')[0].trim();
     if (isValidIPv4(first)) return first;
+    // IPv6 回环（本机访问）归一化为 127.0.0.1
+    if (first === '::1' || first === '::ffff:127.0.0.1') return '127.0.0.1';
   }
-  return (req.socket?.remoteAddress || '').replace(/^::ffff:/, '');
+  const socketIp = (req.socket?.remoteAddress || '').replace(/^::ffff:/, '');
+  return socketIp === '::1' ? '127.0.0.1' : socketIp;
+}
+
+/** 是否本机回环地址（127.0.0.0/8），本机/localhost 访问始终可信 */
+export function isLoopbackIp(ip: string): boolean {
+  if (!ip) return false;
+  if (ip === '::1' || ip === '127.0.0.1') return true;
+  const parts = ip.split('.');
+  return parts.length === 4 && parts[0] === '127';
 }
 
 /** 读取当前允许列表（数组） */
@@ -83,6 +94,16 @@ export function accessControlMiddleware(req: Request, res: Response, next: NextF
   }
 
   try {
+    const clientIp = getClientIp(req);
+
+    // 本机回环地址（127.0.0.0/8、::1）始终放行：
+    // 本机/localhost 访问可信（nginx 反代入口就是 127.0.0.1），
+    // 避免用户在本机访问时因白名单不含 localhost 被锁在平台外
+    if (isLoopbackIp(clientIp)) {
+      next();
+      return;
+    }
+
     const allowed = getAllowedIps();
     if (allowed.length === 0) {
       // 未配置任何规则 = 默认允许所有
@@ -90,7 +111,6 @@ export function accessControlMiddleware(req: Request, res: Response, next: NextF
       return;
     }
 
-    const clientIp = getClientIp(req);
     if (allowed.some((rule) => ipInRange(clientIp, rule))) {
       next();
       return;
