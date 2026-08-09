@@ -103,10 +103,15 @@ export function useServerActionsQueries(
 
   // 根据选中的标签或分组筛选服务器
   const safeServers = Array.isArray(servers) ? servers : [];
+  // 根分组（"全部服务器"，parent_id 为 null）语义 = 显示所有服务器，
+  // 因为服务器只绑定到子分组（mapping 不含根分组）
+  const rootGroupId = (groupsData || []).find((g) => g.parent_id == null)?.id;
   const filteredServers = selectedGroupId
-    ? safeServers.filter((server: Server) =>
-        (server.groups || []).some((g: { id: string; name: string }) => g.id === selectedGroupId),
-      )
+    ? selectedGroupId === rootGroupId
+      ? safeServers
+      : safeServers.filter((server: Server) =>
+          (server.groups || []).some((g: { id: string; name: string }) => g.id === selectedGroupId),
+        )
     : selectedTag
       ? safeServers.filter((server: Server) =>
           (Array.isArray(server.tags) ? server.tags : []).includes(selectedTag),
