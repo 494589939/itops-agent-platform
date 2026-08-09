@@ -38,19 +38,25 @@ export default function BatchCommandModal({ open, servers, onClose, onFinished }
   } | null>(null);
   const [results, setResults] = useState<BatchResultItem[] | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // 待人工确认任务（AI 等外部发起的批量任务，需人工批准后执行）
+  const [pendingTasks, setPendingTasks] = useState<Array<{ taskId: string; command: string; total: number; requestedBy: string; createdAt: number }>>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
+  const loadPendingTasks = async () => {
+    try {
+      const { data } = await api.get('/server-commands/batch/pending');
+      setPendingTasks(data || []);
+    } catch { /* 静默 */ }
+  };
 
-  // 打开时重置
+  // 打开时重置 + 加载待确认任务
   useEffect(() => {
     if (open) {
       setRunning(false);
       setTaskState(null);
       setResults(null);
       setExpanded(new Set());
+      loadPendingTasks();
     }
   }, [open]);
 
@@ -90,6 +96,7 @@ export default function BatchCommandModal({ open, servers, onClose, onFinished }
         command,
         concurrency,
         timeout: timeoutSec * 1000,
+        requireConfirmation: false, // 用户手动操作：已主动确认，无需二次审批
       });
       pollStatus(data.taskId);
     } catch (err) {
@@ -106,6 +113,22 @@ export default function BatchCommandModal({ open, servers, onClose, onFinished }
       .map((r) => `[${r.success ? 'OK' : 'FAIL'}] ${r.name} (${r.durationMs}ms)\n${r.success ? r.stdout : (r.error || r.stderr)}`)
       .join('\n\n');
     navigator.clipboard?.writeText(text).then(() => toast.success('结果已复制到剪贴板')).catch(() => toast.error('复制失败'));
+  };
+
+  const approvePending = async (taskId: string) => {
+    try {
+      await api.post(`/server-commands/batch/${taskId}/approve`);
+      toast.success('已批准执行');
+      loadPendingTasks();
+    } catch { toast.error('批准失败'); }
+  };
+
+  const rejectPending = async (taskId: string) => {
+    try {
+      await api.post(`/server-commands/batch/${taskId}/reject`);
+      toast.success('已取消该任务');
+      loadPendingTasks();
+    } catch { toast.error('取消失败'); }
   };
 
   if (!open) return null;
@@ -187,6 +210,39 @@ export default function BatchCommandModal({ open, servers, onClose, onFinished }
               />
             </div>
           </div>
+
+          {/* 待人工确认任务（AI/外部发起） */}
+          {pendingTasks.length > 0 && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-text-primary">
+                待人工确认的任务
+                <span className="text-xs text-text-tertiary ml-2">AI 或其他入口发起的批量任务，需批准后才会执行</span>
+              </label>
+              {pendingTasks.map((t) => (
+                <div key={t.taskId} className="flex items-center gap-3 border border-yellow-500/30 bg-yellow-500/5 rounded-xl px-3 py-2.5">
+                  <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-text-primary truncate font-mono">{t.command.slice(0, 60)}</div>
+                    <div className="text-xs text-text-tertiary">
+                      {t.taskId.slice(0, 18)}… · {t.total} 台 · 发起人 {t.requestedBy} · {new Date(t.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => approvePending(t.taskId)}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded-lg text-white transition-colors"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" /> 批准执行
+                  </button>
+                  <button
+                    onClick={() => rejectPending(t.taskId)}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-surface border border-border rounded-lg text-text-secondary hover:text-red-400 transition-colors"
+                  >
+                    <XCircle className="w-3.5 h-3.5" /> 取消
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* 执行中：进度条 */}
           {running && taskState && (

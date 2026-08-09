@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { type RegisteredTool, RiskLevel } from '../types';
 import { textResult, jsonResult, READONLY } from './shared';
 import { executeCommand } from '../../../../modules/servers/services/sshService';
+import { serverCommandBatchService } from '../../../../modules/servers/services/serverCommandBatchService';
 import { serversRepo } from '../../../../repositories';
 
 export const serverTools: RegisteredTool[] = [
@@ -244,6 +245,126 @@ export const serverTools: RegisteredTool[] = [
       } catch (err) {
         return textResult(`服务检查失败: ${(err as Error).message}`, true);
       }
+    },
+    enabled: true,
+  },
+
+  {
+    name: 'server.batchExec',
+    title: '批量执行服务器命令',
+    description:
+      '在多台服务器上批量执行同一条命令或脚本（支持并发），逐台返回成功/失败及输出。' +
+      '用于批量部署、巡检、下发配置、批量重启服务等。' +
+      '默认需要人工确认后执行：创建任务后进入待确认状态，告知用户任务 ID 并在平台"批量执行命令"弹窗中确认；' +
+      '若 requireConfirmation=false 则直接执行并同步返回完整结果（含每台成功/失败原因）。',
+    domain: 'server_operation',
+    inputSchema: z.object({
+      serverIds: z.array(z.string()).describe('目标服务器 ID 列表（可用 server.list 查询）'),
+      command: z.string().describe('要批量执行的命令或脚本，支持多行'),
+      concurrency: z.number().int().min(1).max(20).optional().describe('并发数，默认 5'),
+      timeoutMs: z.number().int().min(1000).max(300000).optional().describe('单台超时（毫秒），默认 30000'),
+      requireConfirmation: z.boolean().optional().describe('是否需人工确认后执行，默认 true；危险/变更类操作应保持 true'),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, riskLevel: RiskLevel.HIGH, requiresApproval: false },
+    handler: async (args, ctx) => {
+      const actor = (ctx as { userId?: string })?.userId || 'ai-agent';
+      try {
+        const requireConfirmation = args.requireConfirmation !== false;
+        const task = serverCommandBatchService.createBatchTask({
+          serverIds: args.serverIds as string[],
+          command: args.command as string,
+          concurrency: args.concurrency as number | undefined,
+          timeout: args.timeoutMs as number | undefined,
+          requireConfirmation,
+          requestedBy: actor,
+        });
+
+        // 需要人工确认：返回任务信息，由用户在平台确认后执行
+        if (task.status === 'pending_approval') {
+          return jsonResult(
+            {
+              taskId: task.taskId,
+              status: 'pending_approval',
+              total: task.total,
+              command: task.command,
+              message: '任务已创建，等待人工确认后执行',
+            },
+            `批量任务 ${task.taskId} 已创建（${task.total} 台），等待人工确认。请告知用户在服务器管理的"批量执行命令"弹窗中确认后执行。`,
+          );
+        }
+
+        // 不需要确认：同步等待执行完成（轮询任务状态），把完整结果给 AI
+        const estimatedMs = (args.timeoutMs || 30000) * Math.ceil((task.total || 1) / task.concurrency) + 15000;
+        const deadline = Date.now() + Math.min(estimatedMs, 240_000);
+        while (Date.now() < deadline) {
+          const t = serverCommandBatchService.getBatchTask(task.taskId);
+          if (!t) break;
+          if (t.status === 'done' || t.status === 'error' || t.status === 'cancelled') {
+            return jsonResult(
+              {
+                taskId: t.taskId,
+                status: t.status,
+                total: t.total,
+                successCount: t.successCount,
+                failedCount: t.failedCount,
+                results: t.results.map((r) => ({
+                  serverId: r.serverId,
+                  name: r.name,
+                  success: r.success,
+                  stdout: r.stdout,
+                  stderr: r.stderr,
+                  durationMs: r.durationMs,
+                  error: r.error,
+                })),
+              },
+              `批量执行${t.status === 'done' ? '完成' : '未完成'}: ${t.successCount}/${t.total} 台成功`,
+            );
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+        return textResult('批量执行仍在进行，请稍后用 server.batchQuery 查询结果', false);
+      } catch (err) {
+        return textResult(`批量执行失败: ${(err as Error).message}`, true);
+      }
+    },
+    enabled: true,
+  },
+
+  {
+    name: 'server.batchQuery',
+    title: '查询批量命令执行结果',
+    description: '查询批量服务器命令任务的执行状态与逐台结果（含成功/失败及失败原因）。' +
+      '用于人工确认后获取执行结果，或查询进行中任务的进度。',
+    domain: 'server_operation',
+    annotations: READONLY,
+    inputSchema: z.object({
+      taskId: z.string().describe('批量任务 ID（server.batchExec 返回）'),
+    }),
+    handler: async (args) => {
+      const task = serverCommandBatchService.getBatchTask(args.taskId as string);
+      if (!task) return textResult(`任务 ${args.taskId} 不存在或已过期`, true);
+      return jsonResult(
+        {
+          taskId: task.taskId,
+          status: task.status,
+          requireConfirmation: task.requireConfirmation,
+          total: task.total,
+          completed: task.completed,
+          successCount: task.successCount,
+          failedCount: task.failedCount,
+          error: task.error,
+          results: task.results.map((r) => ({
+            serverId: r.serverId,
+            name: r.name,
+            success: r.success,
+            stdout: r.stdout,
+            stderr: r.stderr,
+            durationMs: r.durationMs,
+            error: r.error,
+          })),
+        },
+        `任务 ${task.taskId} 状态: ${task.status}（${task.successCount}/${task.total} 台成功）`,
+      );
     },
     enabled: true,
   },

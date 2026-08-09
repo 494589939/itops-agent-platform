@@ -319,6 +319,7 @@ export const serverCommandSchemas = {
     command: z.string().min(1, '命令不能为空').max(10000),
     timeout: z.coerce.number().int().min(1000).max(300000).optional(),
     concurrency: z.coerce.number().int().min(1).max(20).optional(),
+    requireConfirmation: z.boolean().optional().describe('需要人工确认后执行（AI 调用默认 true，手动操作传 false）'),
   }),
 };
 
