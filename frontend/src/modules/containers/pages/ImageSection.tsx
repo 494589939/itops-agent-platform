@@ -1,10 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Image, RefreshCw, Download, Trash2, X } from 'lucide-react';
 import api from '../../../lib/api';
 import { useToast } from '../../../contexts/ToastContext';
 import type { ImageItem } from './types';
-import { formatBytes, formatDate, imageRepo, imageTagOnly } from './types';
+import { formatDate, imageRepo, imageTagOnly } from './types';
+
+// 与 docker images 命令显示口径一致（1000 进制：326MB / 1.55GB）
+function formatImageSize(bytes: number): string {
+  if (!bytes || bytes <= 0) return '0 B';
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
+  if (bytes >= 1e3) return `${(bytes / 1e3).toFixed(1)} KB`;
+  return `${bytes} B`;
+}
+
+// ── 镜像拉取任务状态（后端 GET /containers/images/pull/status/:taskId 返回）──
+interface PullTaskStatus {
+  taskId: string;
+  imageName: string;
+  status: 'running' | 'done' | 'error';
+  percent: number;
+  message: string;
+  error?: string;
+}
 
 // ── Props ──────────────────────────────────────────────
 
@@ -20,10 +39,54 @@ export function ImageSection({ endpointId }: ImageSectionProps) {
 
   const [showPullModal, setShowPullModal] = useState(false);
   const [pullImageName, setPullImageName] = useState('');
+  const [pullTask, setPullTask] = useState<PullTaskStatus | null>(null);
+  const pullTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const imagesQueryKey = ['containers-images', endpointId];
+
+  // 组件卸载时清理拉取进度轮询
+  useEffect(() => {
+    return () => {
+      if (pullTimerRef.current) clearInterval(pullTimerRef.current);
+    };
+  }, []);
+
+  const stopPullPolling = () => {
+    if (pullTimerRef.current) {
+      clearInterval(pullTimerRef.current);
+      pullTimerRef.current = null;
+    }
+  };
+
+  const pollPullStatus = (taskId: string) => {
+    stopPullPolling();
+    const params = endpointId !== 'local' ? { endpointId } : undefined;
+    pullTimerRef.current = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/containers/images/pull/status/${taskId}`, { params });
+        const t = data as PullTaskStatus;
+        setPullTask({ ...t });
+        if (t.status === 'done') {
+          stopPullPolling();
+          setPullTask(null);
+          setShowPullModal(false);
+          setPullImageName('');
+          queryClient.invalidateQueries({ queryKey: imagesQueryKey });
+          toast.success('镜像拉取成功');
+        } else if (t.status === 'error') {
+          stopPullPolling();
+          setPullTask(null);
+          toast.error(t.error || '拉取镜像失败');
+        }
+      } catch {
+        stopPullPolling();
+        setPullTask(null);
+        toast.error('拉取镜像失败');
+      }
+    }, 1000);
+  };
 
   // ═══ QUERIES ═══════════════════════════════════════════
 
-  const imagesQueryKey = ['containers-images', endpointId];
   const { data: images = [], isLoading: imagesLoading, error: imagesError } = useQuery<ImageItem[]>({
     queryKey: imagesQueryKey,
     queryFn: async () => {
@@ -37,15 +100,24 @@ export function ImageSection({ endpointId }: ImageSectionProps) {
   // ═══ MUTATIONS ═════════════════════════════════════════
 
   const pullImageMutation = useMutation({
-    mutationFn: () =>
-      api.post('/containers/images/pull', { image: pullImageName }, {
+    mutationFn: async () => {
+      const { data } = await api.post('/containers/images/pull', { image: pullImageName }, {
         params: { endpointId: endpointId !== 'local' ? endpointId : undefined },
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: imagesQueryKey });
-      toast.success('镜像拉取成功');
-      setShowPullModal(false);
-      setPullImageName('');
+      });
+      return (data as { taskId?: string } | undefined)?.taskId;
+    },
+    onSuccess: (taskId) => {
+      if (taskId) {
+        // 异步拉取：启动进度轮询
+        setPullTask({ taskId, imageName: pullImageName, status: 'running', percent: 0, message: '准备拉取...' });
+        pollPullStatus(taskId);
+      } else {
+        // 兼容后端未返回 taskId 的情况：直接刷新列表
+        queryClient.invalidateQueries({ queryKey: imagesQueryKey });
+        toast.success('镜像拉取成功');
+        setShowPullModal(false);
+        setPullImageName('');
+      }
     },
     onError: () => toast.error('拉取镜像失败'),
   });
@@ -125,7 +197,9 @@ export function ImageSection({ endpointId }: ImageSectionProps) {
                         <div className="text-xs text-text-tertiary font-mono">{(img.Id || img.id || '').substring(0, 12)}</div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap hidden md:table-cell">
-                        <div className="text-sm text-text-secondary">{formatBytes(img.Size || 0)}</div>
+                        <div className="text-sm text-text-secondary" title={`${img.Size ? img.Size.toLocaleString() + ' 字节' : ''}（与 docker images 命令一致，含共享层）`}>
+                          {formatImageSize(img.Size || 0)}
+                        </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell">
                         <div className="text-xs text-text-secondary">{formatDate(img.Created)}</div>
@@ -159,11 +233,28 @@ export function ImageSection({ endpointId }: ImageSectionProps) {
                 <label className="block text-sm font-medium text-text-primary mb-1">镜像名称 <span className="text-red-400">*</span></label>
                 <input type="text" value={pullImageName} onChange={(e) => setPullImageName(e.target.value)} placeholder="nginx:latest" className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:border-blue-500 text-sm" />
               </div>
+
+              {/* 拉取进度 */}
+              {pullTask && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-text-secondary">
+                    <span className="truncate mr-2">{pullTask.message}</span>
+                    <span className="shrink-0 font-medium">{pullTask.percent}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-background rounded-full overflow-hidden border border-border">
+                    <div
+                      className="h-full bg-blue-600 transition-all duration-300"
+                      style={{ width: `${Math.max(2, pullTask.percent)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2">
-                <button onClick={() => { setShowPullModal(false); setPullImageName(''); }} className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-text-primary rounded-lg transition-colors text-sm">取消</button>
-                <button onClick={() => pullImageMutation.mutate()} disabled={!pullImageName.trim() || pullImageMutation.isPending}
+                <button onClick={() => { setShowPullModal(false); setPullImageName(''); stopPullPolling(); setPullTask(null); }} className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-text-primary rounded-lg transition-colors text-sm" disabled={pullTask?.status === 'running'}>取消</button>
+                <button onClick={() => pullImageMutation.mutate()} disabled={!pullImageName.trim() || pullImageMutation.isPending || pullTask?.status === 'running'}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                  {pullImageMutation.isPending ? '拉取中...' : <><Download className="w-4 h-4" /> 拉取</>}
+                  {pullImageMutation.isPending || pullTask?.status === 'running' ? '拉取中...' : <><Download className="w-4 h-4" /> 拉取</>}
                 </button>
               </div>
             </div>

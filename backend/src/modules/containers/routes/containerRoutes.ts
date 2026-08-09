@@ -277,6 +277,42 @@ router.delete('/:id', requireRole('admin', 'operator'), async (req: Request, res
 // 镜像管理
 // ═══════════════════════════════════════════════════
 
+// ── 镜像拉取任务（内存态，供前端轮询进度）──
+interface PullTask {
+  taskId: string;
+  imageName: string;
+  status: 'running' | 'done' | 'error';
+  percent: number;
+  message: string;
+  error?: string;
+  updatedAt: number;
+}
+const pullTasks = new Map<string, PullTask>();
+let pullTaskSeq = 0;
+
+function formatPullBytes(n: number): string {
+  if (n >= 1024 * 1024 * 1024) return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+  if (n >= 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
+  if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
+  return n + ' B';
+}
+
+function applyPullEvent(task: PullTask, evt: Record<string, unknown>): void {
+  const status = typeof evt.status === 'string' ? evt.status : '';
+  const pd = evt.progressDetail as { current?: number; total?: number } | undefined;
+  if (pd && typeof pd.current === 'number') {
+    if (typeof pd.total === 'number' && pd.total > 0) {
+      task.percent = Math.max(task.percent, Math.min(99, Math.round((pd.current / pd.total) * 100)));
+    }
+    const cur = formatPullBytes(pd.current);
+    const tot = typeof pd.total === 'number' && pd.total > 0 ? ' / ' + formatPullBytes(pd.total) : '';
+    task.message = `${status} ${cur}${tot}`;
+  } else if (status) {
+    task.message = status.charAt(0).toUpperCase() + status.slice(1);
+  }
+  task.updatedAt = Date.now();
+}
+
 router.get('/images/list', async (req: Request, res: Response) => {
   if (!checkDockerAvailable(res, req)) return;
   try {
@@ -296,21 +332,55 @@ router.post(
     try {
       const { image } = req.body;
       if (!image) return res.status(400).json({ success: false, message: '缺少镜像名称' });
-      const d = getDocker(req);
-      const stream = await d.pull(image);
-      await new Promise<void>((resolve, reject) => {
-        d.modem.followProgress(
-          stream,
-          (err: Error | null) => (err ? reject(err) : resolve()),
-          () => {},
-        );
-      });
-      res.json({ success: true, message: `镜像 ${image} 拉取成功` });
+
+      const taskId = `pull_${Date.now()}_${++pullTaskSeq}`;
+      const task: PullTask = {
+        taskId,
+        imageName: image,
+        status: 'running',
+        percent: 0,
+        message: '准备拉取...',
+        updatedAt: Date.now(),
+      };
+      pullTasks.set(taskId, task);
+
+      // 异步执行拉取：立即返回 taskId，前端通过 /images/pull/status/:taskId 轮询进度
+      void (async () => {
+        try {
+          const d = getDocker(req);
+          const stream = await d.pull(image);
+          await new Promise<void>((resolve, reject) => {
+            d.modem.followProgress(
+              stream,
+              (err: Error | null) => (err ? reject(err) : resolve()),
+              (evt: Record<string, unknown>) => applyPullEvent(task, evt),
+            );
+          });
+          task.status = 'done';
+          task.percent = 100;
+          task.message = '拉取完成';
+          task.updatedAt = Date.now();
+        } catch (err: unknown) {
+          task.status = 'error';
+          task.error = getErrorMessage(err);
+          task.message = '拉取失败';
+          task.updatedAt = Date.now();
+        }
+      })();
+
+      res.json({ success: true, data: { taskId } });
     } catch (err: unknown) {
       res.status(500).json({ success: false, message: getErrorMessage(err) });
     }
   },
 );
+
+// 镜像拉取进度查询（前端轮询）
+router.get('/images/pull/status/:taskId', (req: Request, res: Response) => {
+  const task = pullTasks.get(req.params.taskId);
+  if (!task) return res.status(404).json({ success: false, message: '任务不存在或已过期' });
+  res.json({ success: true, data: task });
+});
 
 router.delete(
   '/images/:id',

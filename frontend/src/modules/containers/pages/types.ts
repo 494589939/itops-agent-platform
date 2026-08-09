@@ -32,6 +32,7 @@ export interface ImageItem {
   RepoTags?: string[];
   RepoDigests?: string[];
   Size?: number;
+  VirtualSize?: number;
   Created?: number;
 }
 
