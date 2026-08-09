@@ -34,6 +34,8 @@ export default function Servers() {
     pendingDeleteServer, setPendingDeleteServer,
     isCollecting,
     isCollectingMetrics,
+    collectingServerIds,
+    collectingMetricsServerIds,
     // AI — isAiCommandModalOpen, setIsAiCommandModalOpen,
     isAiCommandModalOpen, setIsAiCommandModalOpen,
     aiCommandServer,
@@ -110,6 +112,8 @@ export default function Servers() {
               onToggleGroups={() => setShowGroups(!showGroups)}
               isCollecting={isCollecting}
               isCollectingMetrics={isCollectingMetrics}
+              collectingServerIds={collectingServerIds}
+              collectingMetricsServerIds={collectingMetricsServerIds}
               onCollectAll={handleCollectAll}
               onCollectAllMetrics={handleCollectAllMetrics}
               onOpenImport={() => {

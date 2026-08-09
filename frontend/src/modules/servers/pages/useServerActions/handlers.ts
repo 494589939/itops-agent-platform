@@ -61,6 +61,8 @@ export function useServerActionsHandlers(
   setCommand: (v: string) => void,
   setIsCollecting: (v: boolean) => void,
   setIsCollectingMetrics: (v: boolean) => void,
+  setCollectingServerIds: (v: Set<string> | ((prev: Set<string>) => Set<string>)) => void,
+  setCollectingMetricsServerIds: (v: Set<string> | ((prev: Set<string>) => Set<string>)) => void,
   setImportData: (v: string) => void,
   setImportResult: (v: any) => void,
   setAiCommandServer: (v: Server | null) => void,
@@ -235,14 +237,15 @@ export function useServerActionsHandlers(
   };
 
   const handleCollectInfo = async (server: Server) => {
-    setIsCollecting(true);
+    // 单台采集：只标记该台正在采集（卡片级 loading），不触发全局状态
+    setCollectingServerIds(prev => new Set(prev).add(server.id));
     try {
       await collectInfoMutation.mutateAsync(server.id);
       toast.success(`已更新 ${server.name} 的主机信息`);
     } catch {
       toast.error('采集失败');
     } finally {
-      setIsCollecting(false);
+      setCollectingServerIds(prev => { const next = new Set(prev); next.delete(server.id); return next; });
     }
   };
 
@@ -344,7 +347,10 @@ ${serverInfo.disk_gb ? `磁盘大小：${serverInfo.disk_gb}GB` : ''}
     setIsCollecting(true);
     try {
       const result = await collectAllMutation.mutateAsync();
-      toast.success(`采集完成: ${result.data.success} 成功, ${result.data.failed} 失败`);
+      // axios 拦截器已解包 → result 即后端 data 字段 { success, failed, errors }
+      const ok = (result as { success?: number } | undefined)?.success ?? 0;
+      const failed = (result as { failed?: number } | undefined)?.failed ?? 0;
+      toast.success(`采集完成: ${ok} 成功, ${failed} 失败`);
     } catch {
       toast.error('批量采集失败');
     } finally {
@@ -353,14 +359,15 @@ ${serverInfo.disk_gb ? `磁盘大小：${serverInfo.disk_gb}GB` : ''}
   };
 
   const handleCollectMetrics = async (server: Server) => {
-    setIsCollectingMetrics(true);
+    // 单台采集：只标记该台正在采集（卡片级 loading），不触发全局状态
+    setCollectingMetricsServerIds(prev => new Set(prev).add(server.id));
     try {
       await collectMetricsMutation.mutateAsync(server.id);
       toast.success(`已采集 ${server.name} 的性能指标`);
     } catch {
       toast.error('采集失败');
     } finally {
-      setIsCollectingMetrics(false);
+      setCollectingMetricsServerIds(prev => { const next = new Set(prev); next.delete(server.id); return next; });
     }
   };
 

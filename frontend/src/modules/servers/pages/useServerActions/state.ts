@@ -46,6 +46,11 @@ interface ServerActionsState {
   setIsCollecting: (v: boolean) => void;
   isCollectingMetrics: boolean;
   setIsCollectingMetrics: (v: boolean) => void;
+  // 单台采集中的服务器 ID 集合（卡片级 loading，避免单台采集时所有按钮一起转）
+  collectingServerIds: Set<string>;
+  setCollectingServerIds: (v: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+  collectingMetricsServerIds: Set<string>;
+  setCollectingMetricsServerIds: (v: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
   // AI 命令生成
   isAiCommandModalOpen: boolean;
   setIsAiCommandModalOpen: (v: boolean) => void;
@@ -128,6 +133,8 @@ export function useServerActionsState(): ServerActionsState {
   const [pendingDeleteServer, setPendingDeleteServer] = useState<{ id: string; name: string } | null>(null);
   const [isCollecting, setIsCollecting] = useState(false);
   const [isCollectingMetrics, setIsCollectingMetrics] = useState(false);
+  const [collectingServerIds, setCollectingServerIds] = useState<Set<string>>(new Set());
+  const [collectingMetricsServerIds, setCollectingMetricsServerIds] = useState<Set<string>>(new Set());
   // AI 命令生成相关
   const [isAiCommandModalOpen, setIsAiCommandModalOpen] = useState(false);
   const [aiCommandServer, setAiCommandServer] = useState<Server | null>(null);
@@ -218,6 +225,8 @@ export function useServerActionsState(): ServerActionsState {
     pendingDeleteServer, setPendingDeleteServer,
     isCollecting, setIsCollecting,
     isCollectingMetrics, setIsCollectingMetrics,
+    collectingServerIds, setCollectingServerIds,
+    collectingMetricsServerIds, setCollectingMetricsServerIds,
     // AI
     isAiCommandModalOpen, setIsAiCommandModalOpen,
     aiCommandServer, setAiCommandServer,

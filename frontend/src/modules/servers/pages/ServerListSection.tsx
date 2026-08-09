@@ -25,6 +25,8 @@ interface ServerListSectionProps {
   onToggleGroups: () => void;
   isCollecting: boolean;
   isCollectingMetrics: boolean;
+  collectingServerIds: Set<string>;
+  collectingMetricsServerIds: Set<string>;
   // Handlers
   onCollectAll: () => void;
   onCollectAllMetrics: () => void;
@@ -58,6 +60,8 @@ export function ServerListSection({
   onToggleGroups,
   isCollecting,
   isCollectingMetrics,
+  collectingServerIds,
+  collectingMetricsServerIds,
   onCollectAll,
   onCollectAllMetrics,
   onOpenImport,
@@ -284,19 +288,19 @@ export function ServerListSection({
                       </button>
                       <button
                         onClick={() => onCollectInfo(server)}
-                        disabled={isCollecting}
+                        disabled={collectingServerIds.has(server.id) || isCollecting}
                         className="p-1 hover:bg-background rounded transition-colors disabled:opacity-50"
                         title="采集主机信息"
                       >
-                        <RefreshCw className={clsx('w-4 h-4 text-text-secondary', isCollecting && 'animate-spin')} />
+                        <RefreshCw className={clsx('w-4 h-4 text-text-secondary', (collectingServerIds.has(server.id) || isCollecting) && 'animate-spin')} />
                       </button>
                       <button
                         onClick={() => onCollectMetrics(server)}
-                        disabled={isCollectingMetrics}
+                        disabled={collectingMetricsServerIds.has(server.id) || isCollectingMetrics}
                         className="p-1 hover:bg-background rounded transition-colors disabled:opacity-50"
                         title="采集性能指标"
                       >
-                        <Monitor className={clsx('w-4 h-4 text-text-secondary', isCollectingMetrics && 'animate-spin')} />
+                        <Monitor className={clsx('w-4 h-4 text-text-secondary', (collectingMetricsServerIds.has(server.id) || isCollectingMetrics) && 'animate-spin')} />
                       </button>
                       <button
                         onClick={() => onDelete(server.id, server.name)}

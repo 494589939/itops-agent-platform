@@ -73,6 +73,7 @@ export function useServerActions() {
     state.setIsRunningCompliance, state.setComplianceResults,
     state.setActiveTab, state.setIsExecuting, state.setCommandResult,
     state.setCommand, state.setIsCollecting, state.setIsCollectingMetrics,
+    state.setCollectingServerIds, state.setCollectingMetricsServerIds,
     state.setImportData, state.setImportResult,
     state.setAiCommandServer, state.setTagDropdownOpen,
     state.tagInputRef,
@@ -118,6 +119,8 @@ export function useServerActions() {
     pendingDeleteServer: state.pendingDeleteServer, setPendingDeleteServer: state.setPendingDeleteServer,
     isCollecting: state.isCollecting, setIsCollecting: state.setIsCollecting,
     isCollectingMetrics: state.isCollectingMetrics, setIsCollectingMetrics: state.setIsCollectingMetrics,
+    collectingServerIds: state.collectingServerIds,
+    collectingMetricsServerIds: state.collectingMetricsServerIds,
     // AI
     isAiCommandModalOpen: state.isAiCommandModalOpen, setIsAiCommandModalOpen: state.setIsAiCommandModalOpen,
     aiCommandServer: state.aiCommandServer, setAiCommandServer: state.setAiCommandServer,
