@@ -53,19 +53,19 @@ export default function ChatWidget() {
     e.preventDefault();
     e.stopPropagation();
     resizeStartRef.current = { startX: e.clientX, startY: e.clientY, width: sizeRef.current.width, height: sizeRef.current.height };
-    document.body.style.cursor = 'se-resize';
+    document.body.style.cursor = 'nwse-resize';
     document.body.style.userSelect = 'none';
 
     const onMove = (ev: MouseEvent) => {
       if (!resizeStartRef.current) return;
       const dx = ev.clientX - resizeStartRef.current.startX;
       const dy = ev.clientY - resizeStartRef.current.startY;
-      // 最大不超视口（右下角留出悬浮按钮/边距），最小不低于 MIN_W/MIN_H
+      // 手柄在左上角：向左/向上拖动为放大（面板右下角固定）
       const maxW = Math.max(MIN_W, window.innerWidth - 48);
       const maxH = Math.max(MIN_H, window.innerHeight - 150);
       const next = {
-        width: Math.min(maxW, Math.max(MIN_W, resizeStartRef.current.width + dx)),
-        height: Math.min(maxH, Math.max(MIN_H, resizeStartRef.current.height + dy)),
+        width: Math.min(maxW, Math.max(MIN_W, resizeStartRef.current.width - dx)),
+        height: Math.min(maxH, Math.max(MIN_H, resizeStartRef.current.height - dy)),
       };
       sizeRef.current = next;
       setSize(next);
@@ -433,13 +433,13 @@ export default function ChatWidget() {
             </div>
           </div>
 
-          {/* 拖拽缩放手柄：右下角 */}
+          {/* 拖拽缩放手柄：左上角 */}
           <div
             onMouseDown={handleResizeStart}
             title="拖动调整大小"
-            className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize flex items-end justify-end p-1 z-10 select-none"
+            className="absolute top-0 left-0 w-6 h-6 cursor-nwse-resize flex items-start justify-start p-1 z-10 select-none"
           >
-            <div className="w-3.5 h-3.5 border-r-2 border-b-2 border-blue-500/70 rounded-br-sm" />
+            <div className="w-3.5 h-3.5 border-l-2 border-t-2 border-blue-500/70 rounded-tl-sm" />
           </div>
         </div>
       )}
