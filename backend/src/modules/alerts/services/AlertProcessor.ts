@@ -114,17 +114,32 @@ class AlertProcessor {
   private async processWithAars(_recordId: string, context: AlertProcessingContext): Promise<ProcessingResult> {
     try {
       await alertAutoResponseService.triggerManually(context.alertId);
-      const log = alertAutoResponseService.getByAlertId(context.alertId);
+      let log = alertAutoResponseService.getByAlertId(context.alertId);
+
+      // AARS 可能已在处理（processingIds 去重导致 triggerManually 立即返回），
+      // 且日志可能还没落库：只要尚未到达最终状态（或 log 尚未出现）就轮询等待，
+      // 避免把"处理中"误判为失败而触发 workflow 双路径重复执行
+      const AARS_FINAL = ['resolved', 'failed', 'escalated', 'pending_approval'];
+      const deadline = Date.now() + 90_000;
+      while ((!log || !AARS_FINAL.includes(log.status)) && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        log = alertAutoResponseService.getByAlertId(context.alertId);
+      }
+
+      // pending_approval 表示 AARS 已接管并进入人工审批队列（非失败），不触发 workflow 回退
+      const isHandled = log?.status === 'resolved' || log?.status === 'pending_approval';
       return {
-        success: log?.status === 'resolved',
+        success: isHandled,
         strategy: 'aars',
         aarsLogId: log?.id
       };
     } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error(`[统一处理] AARS 策略执行异常（触发 workflow 回退）: ${msg}`, err as Error);
       return {
         success: false,
         strategy: 'aars',
-        errorMessage: err instanceof Error ? err.message : String(err)
+        errorMessage: msg
       };
     }
   }

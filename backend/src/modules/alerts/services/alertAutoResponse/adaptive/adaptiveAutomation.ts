@@ -83,8 +83,13 @@ class AdaptiveAutomationEngine {
     }
 
     // ── 安全规则 2: 紧急 + 高置信度 —— 自动执行（即使有风险） ──
-    const isUrgent = riskAssessment.dimensions.urgencyScore.score > 0.8;
-    const isHighConfidence = riskAssessment.dimensions.confidenceScore.score > 0.7;
+    // 防御：sshDiagnosisEngine 降级路径可能返回 dimensions 空对象/缺失维度的 risk，
+    // 此处容错默认 0.5，避免读 undefined.score 崩溃
+    const dims = (riskAssessment?.dimensions ?? {}) as Partial<RiskAssessment['dimensions']>;
+    const urgencyScore = dims.urgencyScore?.score ?? 0.5;
+    const confidenceScore = dims.confidenceScore?.score ?? 0.5;
+    const isUrgent = urgencyScore > 0.8;
+    const isHighConfidence = confidenceScore > 0.7;
     if (isUrgent && isHighConfidence) {
       logger.info('[AdaptiveAutomation] Urgent + high confidence → auto execute');
       return 'auto';
@@ -93,7 +98,10 @@ class AdaptiveAutomationEngine {
     // ── 查询信任矩阵，获取历史成功率 ──
     const operationKey = this.buildOperationKey(remediation);
     const trust = this.trustMatrix.get(operationKey);
-    let autoThreshold = riskAssessment.thresholds.autoThreshold;
+    // 防御：降级路径 risk 可能缺 thresholds/overallRiskScore
+    const overallRisk = typeof riskAssessment?.overallRiskScore === 'number' ? riskAssessment.overallRiskScore : 0.5;
+    const thresholds = riskAssessment?.thresholds ?? { autoThreshold: 0.3, approveThreshold: 0.6, manualThreshold: 0.8 };
+    let autoThreshold = typeof thresholds.autoThreshold === 'number' ? thresholds.autoThreshold : 0.3;
 
     if (trust && trust.approvalCount >= 3) {
       // 基础信任：被批准 3+ 次
@@ -112,9 +120,9 @@ class AdaptiveAutomationEngine {
     }
 
     // ── 最终决策 ──
-    if (riskAssessment.overallRiskScore <= autoThreshold) return 'auto';
-    if (riskAssessment.overallRiskScore <= riskAssessment.thresholds.approveThreshold) return 'approve';
-    if (riskAssessment.overallRiskScore <= riskAssessment.thresholds.manualThreshold) return 'manual';
+    if (overallRisk <= autoThreshold) return 'auto';
+    if (overallRisk <= (thresholds.approveThreshold ?? 0.6)) return 'approve';
+    if (overallRisk <= (thresholds.manualThreshold ?? 0.8)) return 'manual';
     return 'blocked';
   }
 

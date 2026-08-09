@@ -11,9 +11,10 @@ export const processingRecordsRepo = {
    * 对应：AlertProcessor.saveProcessingRecord
    */
   create(recordId: string, alertId: string, status: string): void {
+    // 注意：strategy 列 NOT NULL，INSERT 必须提供默认值，否则整条记录写不进去
     db.prepare(`
-      INSERT INTO alert_processing_records (id, alert_id, status, created_at, updated_at)
-      VALUES (?, ?, ?, datetime('now','localtime'), datetime('now','localtime'))
+      INSERT INTO alert_processing_records (id, alert_id, status, strategy, created_at, updated_at)
+      VALUES (?, ?, ?, 'pending', datetime('now','localtime'), datetime('now','localtime'))
     `).run(recordId, alertId, status);
   },
 

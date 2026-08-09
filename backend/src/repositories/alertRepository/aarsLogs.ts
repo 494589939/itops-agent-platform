@@ -11,7 +11,9 @@ export const aarsLogsRepo = {
    * 对应：alertAutoResponseService.getLogByAlertId
    */
   getByAlertId(alertId: string): AarsResponseLogRecord | undefined {
-    return db.prepare('SELECT * FROM aars_response_logs WHERE alert_id = ? ORDER BY created_at DESC LIMIT 1').get(alertId) as AarsResponseLogRecord | undefined;
+    // 注意：aars_response_logs 无 created_at 列（用 started_at），写错列名会导致
+    // getByAlertId 抛 SqliteError → AlertProcessor.processWithAars 误判 AARS 失败 → 双路径
+    return db.prepare('SELECT * FROM aars_response_logs WHERE alert_id = ? ORDER BY started_at DESC LIMIT 1').get(alertId) as AarsResponseLogRecord | undefined;
   },
 
   /**
