@@ -38,7 +38,6 @@ import {
   Link2,
   Shield,
   Search,
-  Brain,
   Lightbulb,
   ListChecks,
   Workflow,
@@ -171,7 +170,6 @@ export const navigationGroups: NavGroup[] = [
         href: "/root-cause-analysis",
         icon: Search,
       },
-      { name: "nav.aiRootCause", href: "/ai-root-cause", icon: Brain },
       { name: "nav.topology", href: "/topology", icon: Network },
       { name: "nav.aiInsights", href: "/ai-insights", icon: Lightbulb },
       {
