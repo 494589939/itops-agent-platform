@@ -30,6 +30,7 @@ interface AlertListProps {
   onClearSelection: () => void;
   onBatchAcknowledge: () => void;
   onBatchResolve: () => void;
+  onBatchProcess: () => void;
   batchPending: boolean;
 }
 
@@ -48,6 +49,7 @@ export default function AlertList({
   onClearSelection,
   onBatchAcknowledge,
   onBatchResolve,
+  onBatchProcess,
   batchPending,
 }: AlertListProps) {
   if (alerts.length === 0) {
@@ -80,6 +82,7 @@ export default function AlertList({
             <span className="text-sm text-blue-400">已选 {selectedIds.size} 条</span>
             <button onClick={onBatchAcknowledge} disabled={batchPending} className="px-3 py-1.5 text-xs rounded-lg bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 disabled:opacity-50 transition-colors">批量确认</button>
             <button onClick={onBatchResolve} disabled={batchPending} className="px-3 py-1.5 text-xs rounded-lg bg-green-600/20 text-green-400 hover:bg-green-600/30 disabled:opacity-50 transition-colors">批量解决</button>
+            <button onClick={onBatchProcess} disabled={batchPending} className="px-3 py-1.5 text-xs rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 disabled:opacity-50 transition-colors">批量处理</button>
             <button onClick={onClearSelection} className="px-3 py-1.5 text-xs rounded-lg text-text-secondary hover:text-text-primary transition-colors">取消选择</button>
           </div>
         )}

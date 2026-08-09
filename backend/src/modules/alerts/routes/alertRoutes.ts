@@ -112,6 +112,20 @@ router.post('/batch/resolve', requireRole('admin', 'operator'), (req: Request, r
   }
 });
 
+// 批量处理（触发告警处理流水线：匹配映射+修复策略+根因分析）
+router.post('/batch/process', requireRole('admin', 'operator'), (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body as { ids?: string[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'ids 数组必填' });
+    }
+    const triggered = alertCrudService.batchProcess(ids);
+    res.json({ success: true, data: { triggered } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to batch process' });
+  }
+});
+
 router.put('/:id/acknowledge', validateParams(alertSchemas.alertId), (req: Request, res: Response) => {
   try {
     const result = alertCrudService.acknowledgeAlertWithNotification(req.params.id);    if (!result.success) {

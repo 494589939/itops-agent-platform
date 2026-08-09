@@ -130,6 +130,13 @@ export default function Alerts() {
     },
     onSuccess: () => { clearSelection(); refetch(); },
   });
+  const batchProcessMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { data } = await api.post('/alerts/batch/process', { ids });
+      return data;
+    },
+    onSuccess: () => { clearSelection(); refetch(); },
+  });
 
   return (
     <div className="h-full overflow-auto p-6">
@@ -215,7 +222,8 @@ export default function Alerts() {
             onClearSelection={clearSelection}
             onBatchAcknowledge={() => batchAcknowledgeMutation.mutate(Array.from(selectedIds))}
             onBatchResolve={() => batchResolveMutation.mutate(Array.from(selectedIds))}
-            batchPending={batchAcknowledgeMutation.isPending || batchResolveMutation.isPending}
+            onBatchProcess={() => batchProcessMutation.mutate(Array.from(selectedIds))}
+            batchPending={batchAcknowledgeMutation.isPending || batchResolveMutation.isPending || batchProcessMutation.isPending}
           />
         </div>
       </div>

@@ -10,6 +10,8 @@ curl -sL https://gitee.com/IT_Oline/itops-agent-platform/raw/main/deploy.sh -o d
 
 ```
 
+> 📦 **内网/离线部署**（无外网环境、打包镜像带入内网启动）：请参阅 **[OFFLINE-DEPLOY.md](./OFFLINE-DEPLOY.md)** —— 含镜像导出/导入、源码离线构建、Docker 离线安装、数据备份迁移完整步骤与检查清单。
+
 ---
 
 **重要许可证变更通知（2026-05-27）**

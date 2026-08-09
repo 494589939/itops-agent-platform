@@ -262,6 +262,16 @@ export const alertCrudService = {
     return updated;
   },
 
+  /** 批量处理：触发告警处理流水线（匹配映射+修复策略+根因分析），异步执行不阻塞 */
+  batchProcess(ids: string[]): number {
+    let triggered = 0;
+    for (const id of ids) {
+      void this.processAlertManually(id).catch(() => {});
+      triggered++;
+    }
+    return triggered;
+  },
+
   /**
    * 确认告警 + 通知派发（P2-7 下沉，routes PUT /:id/acknowledge 应调用此方法）
    */
