@@ -69,7 +69,7 @@ export default function Servers() {
     handleExecuteCommand, handleRunCompliance, startComplianceCheck,
     handleCollectInfo, handleAiGenerateCommand, handleExecuteAiCommand,
     confirmExecuteAiCommand, handleCollectAll, handleCollectMetrics,
-    handleCollectAllMetrics, handleGroupSubmit, handleImport,
+    handleCollectAllMetrics, handleGroupSubmit, handleDeleteGroup, handleImport,
     openAiCommandForServer,
     // Mutations
     deleteMutation,
@@ -118,7 +118,7 @@ export default function Servers() {
               }}
               onOpenGroupModal={() => {
                 setEditingGroup(null);
-                setGroupFormData({ name: '', description: '', parent_id: '' });
+                setGroupFormData({ name: '', description: '', parent_id: null });
                 setIsGroupModalOpen(true);
               }}
               onTestConnection={handleTestConnection}
@@ -134,6 +134,17 @@ export default function Servers() {
                 setSelectedServer(server);
                 setCommandResult(null);
               }}
+              onEditGroup={(group) => {
+                // 编辑分组：预填表单并打开弹窗
+                setEditingGroup(group);
+                setGroupFormData({
+                  name: group.name || '',
+                  description: group.description || '',
+                  parent_id: group.parent_id || null,
+                });
+                setIsGroupModalOpen(true);
+              }}
+              onDeleteGroup={handleDeleteGroup}
               onRunCompliance={handleRunCompliance}
               onViewCommandHistory={(server) => {
                 setSelectedServer(server);

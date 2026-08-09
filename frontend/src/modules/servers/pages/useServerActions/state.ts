@@ -73,8 +73,8 @@ interface ServerActionsState {
   showSshKeyDropdown: boolean;
   setShowSshKeyDropdown: (v: boolean) => void;
   // Group
-  groupFormData: { name: string; description: string; parent_id: string };
-  setGroupFormData: (v: { name: string; description: string; parent_id: string }) => void;
+  groupFormData: { name: string; description: string; parent_id: string | null };
+  setGroupFormData: (v: { name: string; description: string; parent_id: string | null }) => void;
   editingGroup: ServerGroup | null;
   setEditingGroup: (v: ServerGroup | null) => void;
   // Import
@@ -145,7 +145,7 @@ export function useServerActionsState(): ServerActionsState {
   const [showSshKeyDropdown, setShowSshKeyDropdown] = useState(false);
 
   // Group related
-  const [groupFormData, setGroupFormData] = useState({ name: '', description: '', parent_id: '' });
+  const [groupFormData, setGroupFormData] = useState({ name: '', description: '', parent_id: null as string | null });
   const [editingGroup, setEditingGroup] = useState<ServerGroup | null>(null);
 
   // Import related

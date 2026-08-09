@@ -40,6 +40,8 @@ interface ServerListSectionProps {
   onRunCompliance: (server: ServerType) => void;
   onViewCommandHistory: (server: ServerType) => void;
   onViewComplianceHistory: (server: ServerType) => void;
+  onEditGroup: (group: ServerGroup) => void;
+  onDeleteGroup: (group: ServerGroup) => void;
 }
 
 export function ServerListSection({
@@ -70,6 +72,8 @@ export function ServerListSection({
   onRunCompliance,
   onViewCommandHistory,
   onViewComplianceHistory,
+  onEditGroup,
+  onDeleteGroup,
 }: ServerListSectionProps) {
   const navigate = useNavigate();
 
@@ -135,7 +139,13 @@ export function ServerListSection({
               </button>
             </div>
             {groupsData && groupsData.length > 0 ? (
-              <GroupTree groups={groupsData} selectedGroupId={selectedGroupId} onSelectGroup={onSelectGroupId} />
+              <GroupTree
+                groups={groupsData}
+                selectedGroupId={selectedGroupId}
+                onSelectGroup={onSelectGroupId}
+                onEditGroup={onEditGroup}
+                onDeleteGroup={onDeleteGroup}
+              />
             ) : (
               <p className="text-xs text-text-secondary py-4 text-center">暂无分组</p>
             )}

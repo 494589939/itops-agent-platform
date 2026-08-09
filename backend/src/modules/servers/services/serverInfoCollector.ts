@@ -390,13 +390,27 @@ class ServerInfoCollector {
     const errors: Array<{ serverId: string; serverName: string; error: string }> = [];
     let success = 0;
 
-    for (const server of servers) {
-      const result = await this.collectServerMetrics(server.id);
-      if (result.success) {
-        success++;
-      } else {
-        errors.push({ serverId: server.id, serverName: server.name, error: result.error || 'Unknown error' });
-      }
+    // 分批并发（每批 5 台）采集，避免串行导致多服务器时整体超时
+    const CONCURRENCY = 5;
+    for (let i = 0; i < servers.length; i += CONCURRENCY) {
+      const batch = servers.slice(i, i + CONCURRENCY);
+      const results = await Promise.all(
+        batch.map(async (server) => {
+          try {
+            return await this.collectServerMetrics(server.id);
+          } catch (err) {
+            return { success: false as const, error: err instanceof Error ? err.message : 'Unknown error' };
+          }
+        }),
+      );
+      batch.forEach((server, idx) => {
+        const result = results[idx];
+        if (result.success) {
+          success++;
+        } else {
+          errors.push({ serverId: server.id, serverName: server.name, error: result.error || 'Unknown error' });
+        }
+      });
     }
 
     logger.info(`Metrics collection completed: ${success} success, ${errors.length} failed`);

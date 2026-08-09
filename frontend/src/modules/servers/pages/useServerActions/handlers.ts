@@ -8,7 +8,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Server } from '../types';
+import type { Server, ServerGroup } from '../types';
 import type { ApiError } from './types';
 
 interface ServerActionsHandlers {
@@ -31,6 +31,7 @@ interface ServerActionsHandlers {
   handleCollectMetrics: (server: Server) => Promise<void>;
   handleCollectAllMetrics: () => Promise<void>;
   handleGroupSubmit: (e: React.FormEvent) => void;
+  handleDeleteGroup: (group: ServerGroup) => void;
   handleImport: () => Promise<void>;
   openAiCommandForServer: (server: Server) => void;
 }
@@ -83,6 +84,7 @@ export function useServerActionsHandlers(
   importServersMutation: any,
   createGroupMutation: any,
   updateGroupMutation: any,
+  deleteGroupMutation: any,
   // derived state
   selectedServer: Server | null,
   complianceOptions: { useAI: boolean; concurrency: number },
@@ -366,7 +368,10 @@ ${serverInfo.disk_gb ? `磁盘大小：${serverInfo.disk_gb}GB` : ''}
     setIsCollectingMetrics(true);
     try {
       const result = await collectAllMetricsMutation.mutateAsync();
-      toast.success(`指标采集完成: ${result.data.success} 成功, ${result.data.failed} 失败`);
+      // axios 拦截器已解包 → result 即后端 data 字段 { success, failed, errors }
+      const ok = (result as { success?: number } | undefined)?.success ?? 0;
+      const failed = (result as { failed?: number } | undefined)?.failed ?? 0;
+      toast.success(`指标采集完成: ${ok} 成功, ${failed} 失败`);
     } catch {
       toast.error('批量采集失败');
     } finally {
@@ -382,6 +387,24 @@ ${serverInfo.disk_gb ? `磁盘大小：${serverInfo.disk_gb}GB` : ''}
       createGroupMutation.mutate(groupFormData);
     }
   };
+
+  const handleDeleteGroup = (group: ServerGroup) => {
+    if (!window.confirm(`确定删除分组“${group.name}”吗？${group.server_count ? `该分组下还有 ${group.server_count} 台服务器（将解除关联，不会删除服务器）。` : ''}`)) {
+      return;
+    }
+    try {
+      deleteGroupMutation.mutate(group.id, {
+        onError: (err: unknown) => {
+          const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+          toast.error(msg || '删除分组失败');
+        },
+      });
+      toast.success(`已删除分组: ${group.name}`);
+    } catch {
+      toast.error('删除分组失败');
+    }
+  };
+
 
   const handleImport = async () => {
     try {
@@ -468,6 +491,7 @@ ${serverInfo.disk_gb ? `磁盘大小：${serverInfo.disk_gb}GB` : ''}
     handleCollectMetrics,
     handleCollectAllMetrics,
     handleGroupSubmit,
+    handleDeleteGroup,
     handleImport,
     openAiCommandForServer,
   };

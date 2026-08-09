@@ -4,8 +4,8 @@ import type { ServerGroup } from '../types';
 interface ServerGroupModalProps {
   isOpen: boolean;
   editingGroup: ServerGroup | null;
-  groupFormData: { name: string; description: string; parent_id: string };
-  onGroupFormDataChange: (data: { name: string; description: string; parent_id: string }) => void;
+  groupFormData: { name: string; description: string; parent_id: string | null };
+  onGroupFormDataChange: (data: { name: string; description: string; parent_id: string | null }) => void;
   groupsData: ServerGroup[] | undefined;
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -47,13 +47,13 @@ export function ServerGroupModal({
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">父分组</label>
             <select
-              value={groupFormData.parent_id}
+              value={groupFormData.parent_id || ''}
               onChange={(e) =>
-                onGroupFormDataChange({ ...groupFormData, parent_id: e.target.value })
+                onGroupFormDataChange({ ...groupFormData, parent_id: e.target.value || null })
               }
               className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:border-primary text-text-primary"
             >
-              <option value="">无 (根分组)</option>
+              <option value="">全部服务器（根分组）</option>
               {(groupsData || []).map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.name}

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * useServerActions mutations 子模块（2026-07-21 拆分）
  *
  * 包含 11 个 useMutation：
@@ -28,6 +28,7 @@ interface ServerActionsMutations {
   importServersMutation: any;
   createGroupMutation: any;
   updateGroupMutation: any;
+  deleteGroupMutation: any;
 }
 
 export function useServerActionsMutations(
@@ -40,6 +41,7 @@ export function useServerActionsMutations(
   setGroupFormData: (v: any) => void,
   setEditingGroup: (v: any) => void,
   setIsGroupModalOpen: (v: boolean) => void,
+  setSelectedGroupId: (v: string | null) => void,
   formData: any,
   selectedSshKeyId: string,
   refetchCommandHistory: () => void,
@@ -193,8 +195,10 @@ export function useServerActionsMutations(
       queryClient.invalidateQueries({ queryKey: ['server-groups'] });
       queryClient.invalidateQueries({ queryKey: ['servers'] });
       setIsGroupModalOpen(false);
-      setGroupFormData({ name: '', description: '', parent_id: '' });
+      setGroupFormData({ name: '', description: '', parent_id: null });
       setEditingGroup(null);
+      // 回到“全部服务器”视图，让新分组立即可见
+      setSelectedGroupId(null);
     },
   });
 
@@ -206,8 +210,21 @@ export function useServerActionsMutations(
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['server-groups'] });
       setIsGroupModalOpen(false);
-      setGroupFormData({ name: '', description: '', parent_id: '' });
+      setGroupFormData({ name: '', description: '', parent_id: null });
       setEditingGroup(null);
+    },
+  });
+
+  const deleteGroupMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete(`/server-groups/${id}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['server-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['servers'] });
+      setEditingGroup(null);
+      setSelectedGroupId(null);
     },
   });
 
@@ -217,6 +234,6 @@ export function useServerActionsMutations(
     testConnectionMutation, executeCommandMutation, runComplianceMutation,
     collectInfoMutation, collectAllMutation, collectMetricsMutation, collectAllMetricsMutation,
     importServersMutation,
-    createGroupMutation, updateGroupMutation,
+    createGroupMutation, updateGroupMutation, deleteGroupMutation,
   };
 }
