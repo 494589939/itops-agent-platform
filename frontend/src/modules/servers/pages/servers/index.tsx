@@ -1,4 +1,5 @@
 import { useServerActions } from '../useServerActions';
+import { useState } from 'react';
 import { ServerListSection } from '../ServerListSection';
 import { ServerFormModal } from '../ServerFormModal';
 import { CommandSection } from '../CommandSection';
@@ -9,11 +10,24 @@ import { ServerGroupModal } from './ServerGroupModal';
 import { ServerImportSection } from './ServerImportSection';
 import { ServerDeleteConfirmModal } from './ServerDeleteConfirmModal';
 import { ServerComplianceOptionsModal } from './ServerComplianceOptionsModal';
+import BatchCommandModal from '../BatchCommandModal';
 import { CommandHistorySection } from './CommandHistorySection';
 import { ComplianceHistorySection } from './ComplianceHistorySection';
 
 export default function Servers() {
   const actions = useServerActions();
+
+  // 批量执行命令：勾选服务器 + 批量下发
+  const [batchSelectedIds, setBatchSelectedIds] = useState<Set<string>>(new Set());
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const toggleBatchSelect = (id: string) => {
+    setBatchSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const {
     isModalOpen, setIsModalOpen,
@@ -78,6 +92,8 @@ export default function Servers() {
     // Nav
     navigate, queryClient,
   } = actions;
+
+  const batchSelectedServers = (servers || []).filter((s) => batchSelectedIds.has(s.id));
 
   const showCommandSection =
     selectedServer && (activeTab === 'servers' || activeTab === 'compliance');
@@ -148,6 +164,10 @@ export default function Servers() {
                 });
                 setIsGroupModalOpen(true);
               }}
+              batchSelectedIds={batchSelectedIds}
+              onToggleBatchSelect={toggleBatchSelect}
+              onClearBatchSelection={() => setBatchSelectedIds(new Set())}
+              onOpenBatchCommand={() => setIsBatchModalOpen(true)}
               onDeleteGroup={handleDeleteGroup}
               onRunCompliance={handleRunCompliance}
               onViewCommandHistory={(server) => {
@@ -306,6 +326,21 @@ export default function Servers() {
           isRunningCompliance={isRunningCompliance}
           onClose={() => setShowComplianceOptions(false)}
           onStartCheck={startComplianceCheck}
+        />
+
+        {/* 批量执行命令 */}
+        <BatchCommandModal
+          open={isBatchModalOpen}
+          servers={batchSelectedServers}
+          onClose={() => {
+            setIsBatchModalOpen(false);
+            // 执行完成/关闭后清空选择
+            setBatchSelectedIds(new Set());
+          }}
+          onFinished={() => {
+            // 执行完成后清空选择
+            setBatchSelectedIds(new Set());
+          }}
         />
       </div>
     </div>

@@ -313,6 +313,13 @@ export const serverCommandSchemas = {
     command: z.string().min(1, '命令不能为空').max(10000),
     timeout: z.coerce.number().int().min(1000).max(300000).optional(),
   }),
+  // 批量下发命令：多台服务器 + 并发数控制
+  batchExec: z.object({
+    serverIds: z.array(z.string().uuid()).min(1, '请至少选择一台服务器').max(200, '单次最多 200 台'),
+    command: z.string().min(1, '命令不能为空').max(10000),
+    timeout: z.coerce.number().int().min(1000).max(300000).optional(),
+    concurrency: z.coerce.number().int().min(1).max(20).optional(),
+  }),
 };
 
 // ── 服务器导入校验 Schema ──

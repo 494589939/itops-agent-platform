@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Server, Terminal, CheckCircle2, AlertCircle, ShieldCheck, Wifi, History, Clock, FolderTree,
   Upload, RefreshCw, Plus, Edit, Trash2, Cpu, HardDrive, MemoryStick, Monitor,
-  MonitorPlay, Sparkles, FolderPlus,
+  MonitorPlay, Sparkles, FolderPlus, X,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { Server as ServerType, ServerGroup } from './types';
@@ -44,6 +44,11 @@ interface ServerListSectionProps {
   onViewComplianceHistory: (server: ServerType) => void;
   onEditGroup: (group: ServerGroup) => void;
   onDeleteGroup: (group: ServerGroup) => void;
+  // 批量选择
+  batchSelectedIds: Set<string>;
+  onToggleBatchSelect: (id: string) => void;
+  onClearBatchSelection: () => void;
+  onOpenBatchCommand: () => void;
 }
 
 export function ServerListSection({
@@ -78,6 +83,10 @@ export function ServerListSection({
   onViewComplianceHistory,
   onEditGroup,
   onDeleteGroup,
+  batchSelectedIds,
+  onToggleBatchSelect,
+  onClearBatchSelection,
+  onOpenBatchCommand,
 }: ServerListSectionProps) {
   const navigate = useNavigate();
 
@@ -120,6 +129,27 @@ export function ServerListSection({
           <Upload className="w-4 h-4" />
           批量导入
         </button>
+        <button
+          onClick={onOpenBatchCommand}
+          disabled={batchSelectedIds.size === 0}
+          title="勾选服务器卡片左上角复选框后批量下发命令"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/20 hover:from-blue-500 hover:to-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+        >
+          <Terminal className="w-4 h-4" />
+          批量执行命令
+          {batchSelectedIds.size > 0 && (
+            <span className="px-1.5 py-0.5 text-xs bg-white/20 rounded-full">{batchSelectedIds.size}</span>
+          )}
+        </button>
+        {batchSelectedIds.size > 0 && (
+          <button
+            onClick={onClearBatchSelection}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-surface border border-border text-text-secondary hover:text-text-primary transition-colors"
+          >
+            <X className="w-4 h-4" />
+            取消选择
+          </button>
+        )}
         <button
           onClick={onOpenGroupModal}
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-surface border border-border text-text-secondary hover:text-text-primary transition-colors"
@@ -225,6 +255,7 @@ export function ServerListSection({
                       : server.os_type === 'windows'
                         ? 'border-blue-500/30'
                         : 'border-border',
+                    batchSelectedIds.has(server.id) && 'ring-2 ring-blue-500/60 border-blue-500/60',
                   )}
                 >
                   {/* 操作系统左侧标识条 */}
@@ -241,6 +272,19 @@ export function ServerListSection({
 
                   <div className="flex items-start justify-between mb-3 min-w-0 pl-2">
                     <div className="flex items-center gap-2 min-w-0">
+                      {/* 批量选择复选框 */}
+                      <label
+                        onClick={(e) => e.stopPropagation()}
+                        title="勾选后可批量执行命令"
+                        className="flex items-center flex-shrink-0 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={batchSelectedIds.has(server.id)}
+                          onChange={() => onToggleBatchSelect(server.id)}
+                          className="w-4 h-4 accent-blue-600 cursor-pointer"
+                        />
+                      </label>
                       <div
                         className={clsx(
                           'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
