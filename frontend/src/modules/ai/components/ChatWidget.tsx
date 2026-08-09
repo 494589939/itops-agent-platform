@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, Bot, User, Trash2, MessageSquare, Loader2, X, MinusCircle, AlertCircle } from 'lucide-react';
 import api from '../../../lib/api';
@@ -109,11 +109,13 @@ export default function ChatWidget() {
       return data;
     },
     onSuccess: (data) => {
-      if (data.success) {
-        setCurrentConversationId(data.data.id);
+      // axios 拦截器已解包 → data 即后端 data 字段（对话对象 {id, ...}），
+      // 成功时没有 success 字段，用 data.id 判断（原判断 data.success 恒为 undefined → 误报失败）
+      if (data?.id) {
+        setCurrentConversationId(data.id);
         queryClient.invalidateQueries({ queryKey: ['copilot-conversations'] });
       } else {
-        toast.error(`创建对话失败: ${data.error}`);
+        toast.error(`创建对话失败: ${data?.error || '未知错误'}`);
       }
     },
     onError: () => {
@@ -147,8 +149,10 @@ export default function ChatWidget() {
 
     if (!currentConversationId) {
       await createConversationMutation.mutateAsync().then((data) => {
-        if (data?.success) {
-          sendMessageMutation.mutate({ conversationId: data.data.id, message });
+        if (data?.id) {
+          sendMessageMutation.mutate({ conversationId: data.id, message });
+        } else {
+          toast.error('创建对话失败，请重试');
         }
       });
     } else {

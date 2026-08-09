@@ -96,16 +96,20 @@ export async function callLLMAPI(
         `✅ [${agentName}] ${config.providerName} API call successful, response length: ${content?.length || 0} chars`,
       );
 
-      recordAgentExecution(
-        agentId,
-        agentName,
-        userInput,
-        content || '',
-        'success',
-        undefined,
-        Date.now() - startTime,
-        { tokens: response.data.usage },
-      );
+      // 记录 Agent 执行统计（仅真实 agent 记录；copilot 助手等非 agent 调用
+      // 传空 agentId，跳过记录——避免 agent_executions 外键约束失败）
+      if (agentId) {
+        recordAgentExecution(
+          agentId,
+          agentName,
+          userInput,
+          content || '',
+          'success',
+          undefined,
+          Date.now() - startTime,
+          { tokens: response.data.usage },
+        );
+      }
 
       return content || '';
     } else {

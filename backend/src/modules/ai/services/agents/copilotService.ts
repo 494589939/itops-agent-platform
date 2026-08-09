@@ -316,8 +316,10 @@ class CopilotService {
         : `用户输入：${input}\n对话历史：\n${historyText}`;
 
       // 优先使用 AI 模型池的默认模型（已在 generateCompletion 中实现）
+      // 注意: copilot 不是 agents 表的真实 agent，agentId 传空字符串跳过
+      // agent_executions 记录（否则外键约束失败产生 error 日志）
       logger.info(`🤖 [Copilot] 调用 generateCompletion 生成响应`);
-      const llmResponse = await generateCompletion(enrichedPrompt, COPILOT_SYSTEM_PROMPT, 0.7, undefined, 'copilot');
+      const llmResponse = await generateCompletion(enrichedPrompt, COPILOT_SYSTEM_PROMPT, 0.7, undefined, '', 'Copilot');
       
       // 截断超长响应，防止前端渲染问题
       const truncatedResponse = llmResponse.length > 4000 
