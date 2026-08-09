@@ -102,6 +102,36 @@ export function useContainerTab(endpointId: string) {
     setCreateVolumes(''); setCreateRestart('no'); setCreateMemory(''); setCreateCpuShares('');
   }
 
+  // ── 批量选择与批量操作 ──
+  const [selectedContainerIds, setSelectedContainerIds] = useState<Set<string>>(new Set());
+  const toggleContainerSelect = (id: string) => {
+    setSelectedContainerIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const selectAllInView = () => {
+    setSelectedContainerIds((prev) => {
+      const next = new Set(prev);
+      (containerData?.data || []).forEach((c) => next.add((c as { id?: string }).id || ''));
+      return next;
+    });
+  };
+  const clearContainerSelection = () => setSelectedContainerIds(new Set());
+  // 批量操作：逐个执行（容器数不大，逐个请求足够）
+  const bulkContainerAction = (action: 'start' | 'stop' | 'restart', ids: string[]) => {
+    if (ids.length === 0) return;
+    ids.forEach((id) => containerActionMutation.mutate({ id, action }));
+    setSelectedContainerIds(new Set());
+  };
+  const bulkDeleteContainers = (ids: string[]) => {
+    if (ids.length === 0) return;
+    ids.forEach((id) => deleteContainerMutation.mutate(id));
+    setSelectedContainerIds(new Set());
+  };
+
   return {
     // state
     page, setPage, pageSize, setPageSize,
@@ -128,5 +158,8 @@ export function useContainerTab(endpointId: string) {
     // mutations
     containerActionMutation, deleteContainerMutation, createContainerMutation,
     resetCreateForm,
+    // 批量选择
+    selectedContainerIds, toggleContainerSelect, selectAllInView, clearContainerSelection,
+    bulkContainerAction, bulkDeleteContainers,
   };
 }

@@ -88,6 +88,7 @@ export function useServerActions() {
     state.aiCommandServer, state.aiPrompt, state.aiGeneratedCommand,
     state.command, state.isExecuting, state.selectedAiAgent,
     state.editingGroup, state.groupFormData, state.importData,
+    state.selectedGroupIds, state.setSelectedGroupIds,
     toast, api,
   );
 
@@ -138,6 +139,7 @@ export function useServerActions() {
     // Group
     groupFormData: state.groupFormData, setGroupFormData: state.setGroupFormData,
     editingGroup: state.editingGroup, setEditingGroup: state.setEditingGroup,
+    selectedGroupIds: state.selectedGroupIds, setSelectedGroupIds: state.setSelectedGroupIds,
     // Import
     importData: state.importData, setImportData: state.setImportData,
     importResult: state.importResult, setImportResult: state.setImportResult,

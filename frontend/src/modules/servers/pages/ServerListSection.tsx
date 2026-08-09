@@ -49,6 +49,8 @@ interface ServerListSectionProps {
   onToggleBatchSelect: (id: string) => void;
   onClearBatchSelection: () => void;
   onOpenBatchCommand: () => void;
+  onOpenBatchAssignGroup: () => void;
+  onSelectAllInView: () => void;
 }
 
 export function ServerListSection({
@@ -87,6 +89,8 @@ export function ServerListSection({
   onToggleBatchSelect,
   onClearBatchSelection,
   onOpenBatchCommand,
+  onOpenBatchAssignGroup,
+  onSelectAllInView,
 }: ServerListSectionProps) {
   const navigate = useNavigate();
 
@@ -140,6 +144,24 @@ export function ServerListSection({
           {batchSelectedIds.size > 0 && (
             <span className="px-1.5 py-0.5 text-xs bg-white/20 rounded-full">{batchSelectedIds.size}</span>
           )}
+        </button>
+        <button
+          onClick={onOpenBatchAssignGroup}
+          disabled={batchSelectedIds.size === 0}
+          title="将勾选的服务器加入指定分组"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-surface border border-border text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <FolderPlus className="w-4 h-4" />
+          加入分组
+        </button>
+        <button
+          onClick={onSelectAllInView}
+          disabled={filteredServers.length === 0}
+          title="全选当前列表显示的服务器"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-surface border border-border text-text-secondary hover:text-text-primary disabled:opacity-40 transition-colors"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          全选当前
         </button>
         {batchSelectedIds.size > 0 && (
           <button

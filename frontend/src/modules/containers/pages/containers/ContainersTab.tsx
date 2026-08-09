@@ -25,6 +25,8 @@ export function ContainersTab({ ctx }: { ctx: Ctx }) {
     deleteContainerMutation,
     createContainerMutation,
     resetCreateForm,
+    selectedContainerIds, toggleContainerSelect, selectAllInView, clearContainerSelection,
+    bulkContainerAction, bulkDeleteContainers,
     setSelectedContainerId,
     setSelectedContainerName,
     setShowDetailDrawer,
@@ -63,6 +65,28 @@ export function ContainersTab({ ctx }: { ctx: Ctx }) {
           <RefreshCw className="w-4 h-4" />
           刷新
         </button>
+        {/* 批量操作（勾选后显示） */}
+        {selectedContainerIds.size > 0 && (
+          <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-lg px-3 py-1.5">
+            <span className="text-xs text-blue-300">已选 {selectedContainerIds.size}</span>
+            <button onClick={() => bulkContainerAction('start', Array.from(selectedContainerIds))} className="px-2 py-1 text-xs rounded bg-green-600/20 text-green-400 hover:bg-green-600/30 transition-colors">
+              <Play className="w-3 h-3 inline mr-1" />启动
+            </button>
+            <button onClick={() => bulkContainerAction('stop', Array.from(selectedContainerIds))} className="px-2 py-1 text-xs rounded bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors">
+              <Square className="w-3 h-3 inline mr-1" />停止
+            </button>
+            <button onClick={() => bulkContainerAction('restart', Array.from(selectedContainerIds))} className="px-2 py-1 text-xs rounded bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 transition-colors">
+              <RotateCcw className="w-3 h-3 inline mr-1" />重启
+            </button>
+            <button
+              onClick={() => { if (confirm(`确定删除选中的 ${selectedContainerIds.size} 个容器吗？`)) bulkDeleteContainers(Array.from(selectedContainerIds)); }}
+              className="px-2 py-1 text-xs rounded bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors"
+            >
+              <Trash2 className="w-3 h-3 inline mr-1" />删除
+            </button>
+            <button onClick={clearContainerSelection} className="px-2 py-1 text-xs rounded text-text-secondary hover:text-text-primary transition-colors">取消</button>
+          </div>
+        )}
         <button
           onClick={() => setShowCreateModal(true)}
           className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-1.5 text-sm transition-colors"
@@ -96,6 +120,15 @@ export function ContainersTab({ ctx }: { ctx: Ctx }) {
             <table className="w-full">
               <thead className="bg-background border-b border-border">
                 <tr>
+                  <th className="px-3 py-3 w-8">
+                    <input
+                      type="checkbox"
+                      checked={(containerData?.data || []).length > 0 && (containerData?.data || []).every((c) => selectedContainerIds.has((c as { id?: string }).id || ''))}
+                      onChange={selectAllInView}
+                      title="全选当前页"
+                      className="w-4 h-4 accent-blue-600 cursor-pointer"
+                    />
+                  </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">名称</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">镜像</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">状态</th>
@@ -116,6 +149,15 @@ export function ContainersTab({ ctx }: { ctx: Ctx }) {
                     const ports = c.Ports?.filter((p) => p.PublicPort).map((p) => `${p.PublicPort}→${p.PrivatePort}`) || [];
                     return (
                       <tr key={c.id} className="hover:bg-slate-700/30 transition-colors">
+                        <td className="px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedContainerIds.has(c.id)}
+                            onChange={() => toggleContainerSelect(c.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4 accent-blue-600 cursor-pointer"
+                          />
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm font-medium text-text-primary">{containerName(c)}</div>
                           <div className="text-xs text-text-tertiary font-mono">{c.id?.substring(0, 12)}</div>

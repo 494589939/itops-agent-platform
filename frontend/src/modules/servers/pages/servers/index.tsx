@@ -11,6 +11,7 @@ import { ServerImportSection } from './ServerImportSection';
 import { ServerDeleteConfirmModal } from './ServerDeleteConfirmModal';
 import { ServerComplianceOptionsModal } from './ServerComplianceOptionsModal';
 import BatchCommandModal from '../BatchCommandModal';
+import BatchAssignGroupModal from '../BatchAssignGroupModal';
 import { CommandHistorySection } from './CommandHistorySection';
 import { ComplianceHistorySection } from './ComplianceHistorySection';
 
@@ -20,6 +21,7 @@ export default function Servers() {
   // 批量执行命令：勾选服务器 + 批量下发
   const [batchSelectedIds, setBatchSelectedIds] = useState<Set<string>>(new Set());
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [isBatchAssignGroupModalOpen, setIsBatchAssignGroupModalOpen] = useState(false);
   const toggleBatchSelect = (id: string) => {
     setBatchSelectedIds((prev) => {
       const next = new Set(prev);
@@ -64,6 +66,7 @@ export default function Servers() {
     sshKeySearchQuery, setSshKeySearchQuery,
     showSshKeyDropdown, setShowSshKeyDropdown,
     groupFormData, setGroupFormData, editingGroup, setEditingGroup,
+    selectedGroupIds, setSelectedGroupIds,
     importData, setImportData, importResult,
     // Sidebar — showGroups, setShowGroups,
     showGroups, setShowGroups,
@@ -168,6 +171,15 @@ export default function Servers() {
               onToggleBatchSelect={toggleBatchSelect}
               onClearBatchSelection={() => setBatchSelectedIds(new Set())}
               onOpenBatchCommand={() => setIsBatchModalOpen(true)}
+              onOpenBatchAssignGroup={() => setIsBatchAssignGroupModalOpen(true)}
+              onSelectAllInView={() => {
+                // 全选当前筛选列表（与已选合并，避免取消已选的）
+                setBatchSelectedIds((prev) => {
+                  const next = new Set(prev);
+                  filteredServers.forEach((s) => next.add(s.id));
+                  return next;
+                });
+              }}
               onDeleteGroup={handleDeleteGroup}
               onRunCompliance={handleRunCompliance}
               onViewCommandHistory={(server) => {
@@ -253,6 +265,9 @@ export default function Servers() {
           onShowSshKeyDropdownChange={setShowSshKeyDropdown}
           selectedSshKeyId={selectedSshKeyId}
           onSelectedSshKeyIdChange={setSelectedSshKeyId}
+          groupsData={groupsData}
+          selectedGroupIds={selectedGroupIds}
+          onSelectedGroupIdsChange={setSelectedGroupIds}
           navigate={navigate}
         />
 
@@ -340,6 +355,19 @@ export default function Servers() {
           onFinished={() => {
             // 执行完成后清空选择
             setBatchSelectedIds(new Set());
+          }}
+        />
+
+        {/* 批量加入分组 */}
+        <BatchAssignGroupModal
+          open={isBatchAssignGroupModalOpen}
+          serverIds={Array.from(batchSelectedIds)}
+          serverCount={batchSelectedIds.size}
+          groupsData={groupsData}
+          onClose={() => setIsBatchAssignGroupModalOpen(false)}
+          onFinished={() => {
+            setBatchSelectedIds(new Set());
+            queryClient.invalidateQueries({ queryKey: ['servers'] });
           }}
         />
       </div>

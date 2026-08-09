@@ -99,6 +99,9 @@ export function useServerActionsHandlers(
   editingGroup: any,
   groupFormData: any,
   importData: string,
+  // 服务器表单选中的分组（多选）
+  selectedGroupIds: string[],
+  setSelectedGroupIds: (v: string[]) => void,
   // toast
   toast: any,
   // external api
@@ -152,9 +155,44 @@ export function useServerActionsHandlers(
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedServer) {
-      updateMutation.mutate({ id: selectedServer.id, data: formData });
+      // 编辑：更新服务器信息 + 同步分组（新增的加 mapping，移除的删 mapping）
+      const oldGroupIds = (selectedServer.groups || []).map((g: { id: string }) => g.id);
+      updateMutation.mutate(
+        { id: selectedServer.id, data: formData },
+        {
+          onSuccess: () => {
+            syncServerGroups(selectedServer.id, oldGroupIds, selectedGroupIds);
+            setSelectedGroupIds([]);
+          },
+        },
+      );
     } else {
-      createMutation.mutate(formData);
+      // 创建：成功拿到新 id 后绑定分组
+      createMutation.mutate(formData, {
+        onSuccess: (res: { data?: { id?: string } } | undefined) => {
+          const newId = (res as { data?: { id?: string } } | undefined)?.data?.id;
+          if (newId && selectedGroupIds.length > 0) {
+            void api.post('/server-groups/mapping', { server_ids: [newId], group_id: selectedGroupIds[0] }).catch(() => {});
+            // 多选分组：逐个添加
+            for (let i = 1; i < selectedGroupIds.length; i++) {
+              void api.post('/server-groups/mapping', { server_ids: [newId], group_id: selectedGroupIds[i] }).catch(() => {});
+            }
+          }
+          setSelectedGroupIds([]);
+        },
+      });
+    }
+  };
+
+  // 同步服务器分组：oldGroups → newGroupIds（新增 add、移除 remove）
+  const syncServerGroups = (serverId: string, oldGroupIds: string[], newGroupIds: string[]) => {
+    const toAdd = newGroupIds.filter((gid) => !oldGroupIds.includes(gid));
+    const toRemove = oldGroupIds.filter((gid) => !newGroupIds.includes(gid));
+    for (const gid of toAdd) {
+      void api.post('/server-groups/mapping', { server_ids: [serverId], group_id: gid }).catch(() => {});
+    }
+    for (const gid of toRemove) {
+      void api.delete('/server-groups/mapping', { params: { server_id: serverId, group_id: gid } }).catch(() => {});
     }
   };
 
@@ -186,6 +224,8 @@ export function useServerActionsHandlers(
       vnc_port: server.vnc_port || 5900,
       vnc_password: '',
     });
+    // 预填当前分组（可多选）
+    setSelectedGroupIds((server.groups || []).map((g: { id: string }) => g.id));
     setIsModalOpen(true);
   };
 

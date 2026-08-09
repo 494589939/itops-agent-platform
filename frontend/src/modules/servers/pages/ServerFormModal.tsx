@@ -45,6 +45,10 @@ interface ServerFormModalProps {
   onShowSshKeyDropdownChange: (v: boolean) => void;
   selectedSshKeyId: string;
   onSelectedSshKeyIdChange: (v: string) => void;
+  // 分组（多选）
+  groupsData: Array<{ id: string; name: string; parent_id?: string | null }> | undefined;
+  selectedGroupIds: string[];
+  onSelectedGroupIdsChange: (v: string[]) => void;
   navigate: (path: string) => void;
 }
 
@@ -72,6 +76,9 @@ export function ServerFormModal({
   onShowSshKeyDropdownChange,
   selectedSshKeyId,
   onSelectedSshKeyIdChange,
+  groupsData,
+  selectedGroupIds,
+  onSelectedGroupIdsChange,
   navigate,
 }: ServerFormModalProps) {
   if (!isOpen) return null;
@@ -263,6 +270,41 @@ export function ServerFormModal({
             </div>
             {allTags.length === 0 && (
               <p className="mt-1 text-xs text-text-tertiary">添加服务器后，标签将在此处显示为可选项</p>
+            )}
+          </div>
+
+          <div className="pt-2 border-t border-border">
+            <h4 className="text-sm font-medium text-text-primary mb-3">分组（可多选）</h4>
+            {groupsData && groupsData.filter((g) => g.parent_id !== null).length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {groupsData
+                  .filter((g) => g.parent_id !== null)
+                  .map((g) => {
+                    const checked = selectedGroupIds.includes(g.id);
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() =>
+                          onSelectedGroupIdsChange(
+                            checked
+                              ? selectedGroupIds.filter((id) => id !== g.id)
+                              : [...selectedGroupIds, g.id],
+                          )
+                        }
+                        className={checked
+                          ? 'px-3 py-1.5 rounded-full text-sm bg-blue-600 text-white border border-blue-600'
+                          : 'px-3 py-1.5 rounded-full text-sm bg-background border border-border text-text-secondary hover:border-blue-500/50 hover:text-text-primary transition-colors'}
+                      >
+                        {checked ? '✓ ' : ''}{g.name}
+                      </button>
+                    );
+                  })}
+              </div>
+            ) : (
+              <p className="text-xs text-text-tertiary">
+                暂无分组，可到"新建分组"创建后再回来选择
+              </p>
             )}
           </div>
 

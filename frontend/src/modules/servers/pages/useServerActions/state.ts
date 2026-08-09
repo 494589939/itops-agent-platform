@@ -82,6 +82,9 @@ interface ServerActionsState {
   setGroupFormData: (v: { name: string; description: string; parent_id: string | null }) => void;
   editingGroup: ServerGroup | null;
   setEditingGroup: (v: ServerGroup | null) => void;
+  // 服务器表单选中的分组（可多选）
+  selectedGroupIds: string[];
+  setSelectedGroupIds: (v: string[]) => void;
   // Import
   importData: string;
   setImportData: (v: string) => void;
@@ -154,6 +157,8 @@ export function useServerActionsState(): ServerActionsState {
   // Group related
   const [groupFormData, setGroupFormData] = useState({ name: '', description: '', parent_id: null as string | null });
   const [editingGroup, setEditingGroup] = useState<ServerGroup | null>(null);
+  // 服务器表单选中的分组（可多选；创建/编辑时同步到 server_group_mapping）
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
 
   // Import related
   const [importData, setImportData] = useState('');
@@ -244,6 +249,8 @@ export function useServerActionsState(): ServerActionsState {
     // Group
     groupFormData, setGroupFormData,
     editingGroup, setEditingGroup,
+    // 服务器表单选中的分组（可多选；创建/编辑时同步到 server_group_mapping）
+    selectedGroupIds, setSelectedGroupIds,
     // Import
     importData, setImportData,
     importResult, setImportResult,

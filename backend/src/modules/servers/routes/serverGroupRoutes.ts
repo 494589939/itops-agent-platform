@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { validateBody, validateParams } from '../../../middleware/validation';
 import { requireRole } from '../../../middleware/auth';
 import { logger } from '../../../utils/logger';
@@ -70,6 +70,26 @@ router.delete('/mapping', requireRole('admin', 'operator'), (req, res) => {
     res.json({ success: true });
   } catch {
     res.status(500).json({ success: false, error: 'Failed to remove mapping' });
+  }
+});
+
+// 批量添加服务器到分组（幂等：已在分组的跳过）
+router.post('/mapping', requireRole('admin', 'operator'), (req: Request, res: Response) => {
+  try {
+    const { server_ids, group_id } = req.body as { server_ids?: string[]; group_id?: string };
+    if (!group_id || !Array.isArray(server_ids) || server_ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'server_ids 和 group_id 必填' });
+    }
+    const group = serverGroupCrudService.getGroupById(group_id);
+    if (!group) return res.status(404).json({ success: false, error: '分组不存在' });
+    let added = 0;
+    for (const sid of server_ids) {
+      const r = serverGroupCrudService.addMapping(sid, group_id);
+      if (r.success) added++;
+    }
+    res.json({ success: true, data: { added, total: server_ids.length } });
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to add mapping' });
   }
 });
 
