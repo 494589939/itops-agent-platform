@@ -12,15 +12,15 @@ import clsx from 'clsx';
 import { auditApi, type AuditLog, type AuditStats } from '../api';
 
 export default function AuditLogs() {
-  const [page] = useState(1);
-  const [limit] = useState(20);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
   const [selectedAction, setSelectedAction] = useState('');
   const [selectedResource, setSelectedResource] = useState('');
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: logsData, isLoading } = useQuery({
-    queryKey: ['auditLogs', page, selectedAction, selectedResource],
+    queryKey: ['auditLogs', page, limit, selectedAction, selectedResource],
     queryFn: () => auditApi.listAuditLogs({
       page,
       limit,
@@ -47,6 +47,9 @@ export default function AuditLogs() {
       log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.resource_type.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const total = logsData?.total ?? logs.length;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const actions = Array.from(new Set(logs.map((l) => l.action)));
   const resources = Array.from(new Set(logs.map((l) => l.resource_type)));
@@ -225,6 +228,48 @@ export default function AuditLogs() {
             </tbody>
           </table>
         </div>
+
+        {/* 分页 */}
+        {total > 0 && (
+          <div className="p-4 border-t border-border flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label htmlFor="audit-page-size" className="text-sm text-text-secondary">每页条数</label>
+              <select
+                id="audit-page-size"
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="px-2 py-1 bg-background border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-primary"
+              >
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-text-secondary">共 {total} 条</p>
+              <button
+                onClick={() => setPage(Math.max(1, page - 1))}
+                disabled={page <= 1}
+                className="px-3 py-1 rounded bg-background border border-border text-sm text-text-primary hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                上一页
+              </button>
+              <span className="text-sm text-text-secondary">
+                第 {page} 页 / 共 {totalPages} 页
+              </span>
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page >= totalPages}
+                className="px-3 py-1 rounded bg-background border border-border text-sm text-text-primary hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                下一页
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 详情模态框 */}

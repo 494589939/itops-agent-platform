@@ -45,7 +45,7 @@ export default function LifecycleTab({ dc }: Props) {
         <Button icon={<Search size={14} />} onClick={dc.loadLifecycles}>刷新</Button>
       </Space>
       <Table columns={lifecycleColumns} dataSource={dc.lifecycles.map((l: LifecycleRecord) => ({ ...l, key: l.id }))}
-        pagination={{ pageSize: 50 }} scroll={{ x: 800 }} loading={dc.lifecyclesLoading} />
+        pagination={{ pageSize: 50, showSizeChanger: true, pageSizeOptions: [50, 100, 200, 500], showTotal: (t) => `共 ${t} 条` }} scroll={{ x: 800 }} loading={dc.lifecyclesLoading} />
     </div>
   );
 }

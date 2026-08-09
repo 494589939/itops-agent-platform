@@ -33,10 +33,10 @@ export default function RemediationWorkbench() {
   const [page, setPage] = useState(1);
   const [selectedAuditId, setSelectedAuditId] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const limit = 20;
+  const [limit, setLimit] = useState(20);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['remediation-audits', page],
+    queryKey: ['remediation-audits', page, limit],
     queryFn: async () => {
       const { data } = await api.get('/remediation-audits', {
         params: { page: String(page), limit: String(limit) }
@@ -339,7 +339,24 @@ export default function RemediationWorkbench() {
 
           {data && data.total > limit && (
             <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-text-secondary">共 {data.total} 条记录</div>
+              <div className="flex items-center gap-3 text-sm text-text-secondary">
+                <span>共 {data.total} 条记录</span>
+                <label className="flex items-center gap-2">
+                  每页条数
+                  <select
+                    value={limit}
+                    onChange={(e) => {
+                      setLimit(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="bg-surface border border-border rounded-lg px-2 py-1 text-text-primary text-sm outline-none"
+                  >
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </label>
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}

@@ -15,7 +15,7 @@ export function useContainerTab(endpointId: string) {
   const toast = useToast();
 
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
@@ -104,7 +104,7 @@ export function useContainerTab(endpointId: string) {
 
   return {
     // state
-    page, setPage, pageSize,
+    page, setPage, pageSize, setPageSize,
     search, setSearch,
     statusFilter, setStatusFilter,
     showCreateModal, setShowCreateModal,

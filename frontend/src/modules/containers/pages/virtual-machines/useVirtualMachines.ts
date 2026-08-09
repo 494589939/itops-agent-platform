@@ -41,7 +41,7 @@ export function useVirtualMachines() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
 
   const [showVMModal, setShowVMModal] = useState(false);
   const [editingVM, setEditingVM] = useState<VM | null>(null);
@@ -395,6 +395,7 @@ export function useVirtualMachines() {
     page,
     pageSize,
     setPage,
+    setPageSize,
     updateSearch,
     updateStatusFilter,
     vms: vmsData?.data ?? [],

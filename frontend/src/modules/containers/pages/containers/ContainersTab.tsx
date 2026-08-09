@@ -9,7 +9,7 @@ export function ContainersTab({ ctx }: { ctx: Ctx }) {
     queryClient,
     containersQueryKey,
     containerData, containersLoading, containersError,
-    page, setPage, pageSize,
+    page, setPage, pageSize, setPageSize,
     search, setSearch,
     statusFilter, setStatusFilter,
     showCreateModal, setShowCreateModal,
@@ -198,9 +198,24 @@ export function ContainersTab({ ctx }: { ctx: Ctx }) {
           {/* Pagination */}
           {containerData && containerData.total > pageSize && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-              <span className="text-xs text-text-tertiary">
-                共 {containerData.total} 个，第 {page} / {Math.ceil(containerData.total / pageSize)} 页
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-text-tertiary">
+                  共 {containerData.total} 个，第 {page} / {Math.ceil(containerData.total / pageSize)} 页
+                </span>
+                <label className="flex items-center gap-1.5 text-xs text-text-tertiary">
+                  每页
+                  <select
+                    value={pageSize}
+                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                    className="bg-surface border border-border rounded px-1.5 py-0.5 text-xs text-text-primary outline-none focus:border-accent"
+                  >
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                  条
+                </label>
+              </div>
               <div className="flex gap-1">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}

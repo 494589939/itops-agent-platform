@@ -18,14 +18,14 @@ import type { NotificationRecord } from '../api';
 
 export default function Notifications() {
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const [limit, setLimit] = useState(20);
   const [selectedType, setSelectedType] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
   const { data: notificationsData, isLoading } = useQuery({
-    queryKey: ['notifications', page, selectedType, selectedStatus],
+    queryKey: ['notifications', page, limit, selectedType, selectedStatus],
     queryFn: async () => {
       const params: Record<string, unknown> = { page, limit };
       if (selectedType) params.type = selectedType;
@@ -345,6 +345,19 @@ export default function Notifications() {
                 共 {notificationsData.total} 条通知
               </p>
               <div className="flex items-center gap-2">
+                <select
+                  value={limit}
+                  onChange={(e) => {
+                    setLimit(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="px-3 py-1 rounded bg-background border border-border text-sm text-text-primary focus:outline-none focus:border-primary"
+                  title="每页条数"
+                >
+                  <option value={20}>20 / 页</option>
+                  <option value={50}>50 / 页</option>
+                  <option value={100}>100 / 页</option>
+                </select>
                 <button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}

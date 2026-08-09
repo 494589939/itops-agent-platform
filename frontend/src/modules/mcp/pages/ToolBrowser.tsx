@@ -215,7 +215,7 @@ const ToolBrowser: React.FC = () => {
         columns={columns}
         rowKey="name"
         loading={loading}
-        pagination={{ pageSize: 20, showSizeChanger: false }}
+        pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
         size="small"
       />
 

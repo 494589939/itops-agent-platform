@@ -18,6 +18,7 @@ interface VMListProps {
   onEdit: (vm: VM) => void;
   onDelete: (vm: VM) => void;
   onPageChange: (updater: (page: number) => number) => void;
+  onPageSizeChange?: (size: number) => void;
 }
 
 export function VMList({
@@ -35,6 +36,7 @@ export function VMList({
   onEdit,
   onDelete,
   onPageChange,
+  onPageSizeChange,
 }: VMListProps) {
   return (
     <div className="bg-surface border border-border rounded-lg overflow-hidden">
@@ -180,21 +182,38 @@ export function VMList({
               <span>
                 共 {totalVMs} 台，第 {page} / {Math.ceil(totalVMs / pageSize)} 页
               </span>
-              <div className="flex gap-2">
-                <button
-                  disabled={page <= 1}
-                  onClick={() => onPageChange(current => Math.max(1, current - 1))}
-                  className="px-3 py-1 bg-background border border-border rounded hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  上一页
-                </button>
-                <button
-                  disabled={page >= Math.ceil(totalVMs / pageSize)}
-                  onClick={() => onPageChange(current => current + 1)}
-                  className="px-3 py-1 bg-background border border-border rounded hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  下一页
-                </button>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-1.5">
+                  每页条数
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      onPageSizeChange?.(Number(e.target.value));
+                      onPageChange(() => 1);
+                    }}
+                    className="px-2 py-1 bg-background border border-border rounded text-sm text-text-primary"
+                  >
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    disabled={page <= 1}
+                    onClick={() => onPageChange(current => Math.max(1, current - 1))}
+                    className="px-3 py-1 bg-background border border-border rounded hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    上一页
+                  </button>
+                  <button
+                    disabled={page >= Math.ceil(totalVMs / pageSize)}
+                    onClick={() => onPageChange(current => current + 1)}
+                    className="px-3 py-1 bg-background border border-border rounded hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    下一页
+                  </button>
+                </div>
               </div>
             </div>
           )}

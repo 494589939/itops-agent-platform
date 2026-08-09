@@ -62,6 +62,7 @@ export default function VirtualMachines() {
         onEdit={vm.openEditVM}
         onDelete={(target) => vm.setDeleteConfirm({ id: target.id, name: target.name })}
         onPageChange={vm.setPage}
+        onPageSizeChange={(size) => { vm.setPageSize(size); vm.setPage(1); }}
       />
 
       {vm.showPlatformModal && (

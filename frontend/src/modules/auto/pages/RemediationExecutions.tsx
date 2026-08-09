@@ -46,10 +46,10 @@ export default function RemediationExecutions() {
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [expandedLogs, setExpandedLogs] = useState<Record<string, boolean>>({});
-  const limit = 20;
+  const [limit, setLimit] = useState(20);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['remediation-executions', statusFilter, page],
+    queryKey: ['remediation-executions', statusFilter, page, limit],
     queryFn: async () => {
       const params: Record<string, string> = { page: String(page), limit: String(limit) };
       if (statusFilter !== 'all') {
@@ -305,21 +305,39 @@ export default function RemediationExecutions() {
         {data && data.total > limit && (
           <div className="flex items-center justify-between mt-4">
             <div className="text-sm text-text-secondary">共 {data.total} 条记录</div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1.5 bg-surface border border-border rounded-lg text-text-primary disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700/50 transition-colors"
-              >
-                上一页
-              </button>
-              <span className="text-text-secondary text-sm">{page}</span>
-              <button
-                onClick={() => setPage(p => p + 1)}
-                className="px-3 py-1.5 bg-surface border border-border rounded-lg text-text-primary hover:bg-slate-700/50 transition-colors"
-              >
-                下一页
-              </button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-text-secondary">每页</span>
+                <select
+                  value={limit}
+                  onChange={(e) => {
+                    setLimit(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="px-2 py-1.5 bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-blue-500 text-sm"
+                >
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-sm text-text-secondary">条</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 bg-surface border border-border rounded-lg text-text-primary disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700/50 transition-colors"
+                >
+                  上一页
+                </button>
+                <span className="text-text-secondary text-sm">{page}</span>
+                <button
+                  onClick={() => setPage(p => p + 1)}
+                  className="px-3 py-1.5 bg-surface border border-border rounded-lg text-text-primary hover:bg-slate-700/50 transition-colors"
+                >
+                  下一页
+                </button>
+              </div>
             </div>
           </div>
         )}

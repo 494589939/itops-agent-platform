@@ -33,10 +33,10 @@ export default function RemediationPolicies() {
   const [searchTerm, setSearchTerm] = useState('');
   const [enabledFilter, setEnabledFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
-  const limit = 20;
+  const [limit, setLimit] = useState(20);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['remediation-policies', enabledFilter, page],
+    queryKey: ['remediation-policies', enabledFilter, page, limit],
     queryFn: async () => {
       const params: Record<string, string> = { page: String(page), limit: String(limit) };
       if (enabledFilter !== 'all') {
@@ -246,6 +246,19 @@ export default function RemediationPolicies() {
               共 {data.total} 条策略
             </div>
             <div className="flex items-center gap-2">
+              <span className="text-sm text-text-secondary">每页条数</span>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="px-3 py-1.5 bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-blue-500"
+              >
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
