@@ -1,6 +1,6 @@
 
 import { message } from '@/lib/antdMessage';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 
 import { Table, Button, Modal, Form, Input, Tag, Popconfirm, Empty, Tooltip, Select, Descriptions, Spin } from 'antd';
 
@@ -63,6 +63,39 @@ export default function Images() {
   const [hostFilter, setHostFilter] = useState<string>('all');
   const [pullOpen, setPullOpen] = useState(false);
   const [form] = Form.useForm();
+  // ── 拉取进度（异步任务轮询）──
+  const [pullTask, setPullTask] = useState<{ taskId: string; percent: number; message: string } | null>(null);
+  const pullTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => { if (pullTimerRef.current) clearInterval(pullTimerRef.current); };
+  }, []);
+
+  const pollPullStatus = (taskId: string) => {
+    if (pullTimerRef.current) clearInterval(pullTimerRef.current);
+    pullTimerRef.current = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/images/pull/status/${taskId}`);
+        const t = data as { status: string; percent: number; message: string; error?: string };
+        setPullTask({ taskId, percent: t.percent, message: t.message });
+        if (t.status === 'done') {
+          if (pullTimerRef.current) clearInterval(pullTimerRef.current);
+          setPullTask(null);
+          setPullOpen(false);
+          form.resetFields();
+          fetchData();
+          message.success('镜像拉取成功');
+        } else if (t.status === 'error') {
+          if (pullTimerRef.current) clearInterval(pullTimerRef.current);
+          setPullTask(null);
+          message.error(t.error || '拉取失败');
+        }
+      } catch {
+        if (pullTimerRef.current) clearInterval(pullTimerRef.current);
+        setPullTask(null);
+      }
+    }, 1000);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -93,11 +126,18 @@ export default function Images() {
       // 后端 /images/pull 期望 { imageName, endpointId }；表单字段是 name/tag/serverId
       const imageName =
         values.tag && values.tag !== 'latest' ? `${values.name}:${values.tag}` : values.name;
-      await api.post('/images/pull', { imageName, endpointId: values.serverId || undefined });
-      message.success('拉取请求已提交');
-      setPullOpen(false);
-      form.resetFields();
-      fetchData();
+      const { data } = await api.post('/images/pull', { imageName, endpointId: values.serverId || undefined });
+      const taskId = (data as { taskId?: string } | undefined)?.taskId;
+      if (taskId) {
+        // 异步拉取：轮询进度，Modal 保持打开显示进度条
+        setPullTask({ taskId, percent: 0, message: '准备拉取...' });
+        pollPullStatus(taskId);
+      } else {
+        message.success('拉取请求已提交');
+        setPullOpen(false);
+        form.resetFields();
+        fetchData();
+      }
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       message.error(msg || '拉取失败');
@@ -349,6 +389,8 @@ export default function Images() {
         okText="开始拉取"
         cancelText="取消"
         width={480}
+        okButtonProps={{ disabled: !!pullTask }}
+        cancelButtonProps={{ disabled: !!pullTask }}
       >
         <Form form={form} layout="vertical" className="mt-2">
           <Form.Item name="name" label="镜像名称" rules={[{ required: true, message: '请输入镜像名' }]}>
@@ -361,6 +403,22 @@ export default function Images() {
             <Input placeholder="留空则拉取到所有主机" />
           </Form.Item>
         </Form>
+
+        {/* 拉取进度 */}
+        {pullTask && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-text-secondary">
+              <span className="truncate mr-2">{pullTask.message}</span>
+              <span className="shrink-0 font-medium">{pullTask.percent}%</span>
+            </div>
+            <div className="w-full h-2 bg-background rounded-full overflow-hidden border border-border">
+              <div
+                className="h-full bg-blue-600 transition-all duration-300"
+                style={{ width: `${Math.max(2, pullTask.percent)}%` }}
+              />
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* 镜像详情 */}
