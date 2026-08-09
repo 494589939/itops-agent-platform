@@ -31,6 +31,57 @@ export default function ChatWidget() {
   const [inputValue, setInputValue] = useState('');
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
 
+  // ── 面板尺寸：可拖拽缩放 + 记忆 + 屏幕自适应 ──
+  const MIN_W = 340;
+  const MIN_H = 420;
+  const [size, setSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('copilot-widget-size');
+      if (saved) {
+        const p = JSON.parse(saved) as { width?: number; height?: number };
+        if (typeof p.width === 'number' && typeof p.height === 'number') {
+          return { width: Math.max(MIN_W, p.width), height: Math.max(MIN_H, p.height) };
+        }
+      }
+    } catch { /* ignore */ }
+    return { width: 420, height: 600 };
+  });
+  const sizeRef = useRef(size);
+  const resizeStartRef = useRef<{ startX: number; startY: number; width: number; height: number } | null>(null);
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizeStartRef.current = { startX: e.clientX, startY: e.clientY, width: sizeRef.current.width, height: sizeRef.current.height };
+    document.body.style.cursor = 'se-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = (ev: MouseEvent) => {
+      if (!resizeStartRef.current) return;
+      const dx = ev.clientX - resizeStartRef.current.startX;
+      const dy = ev.clientY - resizeStartRef.current.startY;
+      // 最大不超视口（右下角留出悬浮按钮/边距），最小不低于 MIN_W/MIN_H
+      const maxW = Math.max(MIN_W, window.innerWidth - 48);
+      const maxH = Math.max(MIN_H, window.innerHeight - 150);
+      const next = {
+        width: Math.min(maxW, Math.max(MIN_W, resizeStartRef.current.width + dx)),
+        height: Math.min(maxH, Math.max(MIN_H, resizeStartRef.current.height + dy)),
+      };
+      sizeRef.current = next;
+      setSize(next);
+    };
+    const onUp = () => {
+      resizeStartRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      try { localStorage.setItem('copilot-widget-size', JSON.stringify(sizeRef.current)); } catch { /* ignore */ }
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
   const { data: suggestions, error: suggestionsError } = useQuery({
     queryKey: ['copilot-suggestions'],
     queryFn: async () => {
@@ -193,7 +244,16 @@ export default function ChatWidget() {
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {!isMinimized && (
-        <div className={`w-[420px] h-[600px] ${bgMain} rounded-2xl shadow-2xl border ${borderColor} flex flex-col mb-3 overflow-hidden animate-slide-up`}>
+        <div
+          className={`${bgMain} rounded-2xl shadow-2xl border ${borderColor} flex flex-col mb-3 overflow-hidden animate-slide-up relative`}
+          style={{
+            width: size.width,
+            height: size.height,
+            // 屏幕自适应：面板永不超出视口（右下角按钮/边距之外），小屏自动收缩
+            maxWidth: 'calc(100vw - 48px)',
+            maxHeight: 'calc(100vh - 150px)',
+          }}
+        >
           <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 flex-shrink-0">
             <div className="flex items-center gap-2">
               <Bot className="w-5 h-5 text-white" />
@@ -215,8 +275,7 @@ export default function ChatWidget() {
             </div>
           </div>
 
-          <div className="flex-1 flex overflow-hidden">
-            <div className={`w-32 ${sidebarBg} border-r ${sidebarBorder} flex flex-col flex-shrink-0`}>
+          <div className="flex-1 flex overflow-hidden">            <div className={`w-32 ${sidebarBg} border-r ${sidebarBorder} flex flex-col flex-shrink-0`}>
               <button
                 onClick={() => {
                   createConversationMutation.mutate();
@@ -372,6 +431,15 @@ export default function ChatWidget() {
                 </>
               )}
             </div>
+          </div>
+
+          {/* 拖拽缩放手柄：右下角 */}
+          <div
+            onMouseDown={handleResizeStart}
+            title="拖动调整大小"
+            className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize flex items-end justify-end p-1 z-10 select-none"
+          >
+            <div className="w-3.5 h-3.5 border-r-2 border-b-2 border-blue-500/70 rounded-br-sm" />
           </div>
         </div>
       )}
