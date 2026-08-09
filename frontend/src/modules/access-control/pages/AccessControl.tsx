@@ -28,8 +28,9 @@ export default function AccessControlPage() {
   }, []);
 
   const save = async () => {
+    // 支持换行、逗号（中英文）、分号、顿号、空白等任意分隔符拆分多个 IP/网段
     const rules = value
-      .split('\n')
+      .split(/[\n\r,，;；、\s]+/)
       .map((r) => r.trim())
       .filter(Boolean);
     setSaving(true);
