@@ -172,8 +172,8 @@ export default function AgentTestPanel({
                 onClick={async () => {
                   try {
                     const { data } = await api.get(`/agents/${editingAgent.id}/test-input`);
-                    if (data?.data?.testInput) {
-                      setTestInput(data.data.testInput);
+                    if (data?.testInput) {
+                      setTestInput(data.testInput);
                       message.success('已填充推荐测试输入');
                     }
                   } catch {
