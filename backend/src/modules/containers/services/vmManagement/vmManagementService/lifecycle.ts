@@ -18,6 +18,7 @@ import type { VMAdapter } from '../vmAdapter';
 import { VMwareAdapter } from '../vmwareAdapter';
 import { KVMAdapter } from '../kvmAdapter';
 import { ProxmoxAdapter } from '../proxmoxAdapter';
+import { FusionSphereAdapter } from '../fusionsphereAdapter';
 import type { HypervisorType } from '../../../../../types/vmManagement';
 
 export interface LifecycleContext {
@@ -78,6 +79,9 @@ export function createAdapter(
       break;
     case 'proxmox':
       adapter = new ProxmoxAdapter(platformId, config);
+      break;
+    case 'fusionsphere':
+      adapter = new FusionSphereAdapter(platformId, config);
       break;
     case 'hyperv':
     case 'ovirt':

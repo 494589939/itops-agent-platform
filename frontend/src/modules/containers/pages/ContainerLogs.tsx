@@ -18,6 +18,8 @@ interface Container {
   id: string;
   name: string;
   status: string;
+  /** 机器可读状态（running/exited 等），后端 normalizeContainer 返回 */
+  state?: string;
 }
 
 interface LogEntry {
@@ -160,7 +162,9 @@ export default function ContainerLogs() {
   };
 
   const containerOptions = containers
-    .filter(c => c.status === 'running')
+    // 后端 normalizeContainer: state 是机器可读状态("running"/"exited"),
+    // status 是人类可读文本("Up 5 minutes")，筛选必须用 state
+    .filter(c => c.state === 'running')
     .map(c => ({ label: c.name, value: c.id }));
 
   return (

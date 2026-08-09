@@ -32,13 +32,14 @@ export default function TerminalPage() {
     setSelectedServer(null);
   }, []);
 
-  const { data: serversData, isLoading } = useQuery<{ success: boolean; data: ServerItem[] }>({
+  // axios 拦截器已解包 → r.data 即后端 data 字段（服务器数组），不要再取 .data
+  const { data: serversData, isLoading } = useQuery<ServerItem[]>({
     queryKey: ['servers'],
     queryFn: () => api.get('/servers').then((r) => r.data),
   });
 
   const servers = useMemo(() => {
-    const all = serversData?.data || [];
+    const all = Array.isArray(serversData) ? serversData : [];
     if (!searchTerm) return all;
     const term = searchTerm.toLowerCase();
     return all.filter(

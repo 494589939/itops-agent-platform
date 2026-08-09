@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Containers 模块 API 类型定义（2026-07-21 拆分）
  *
  * 把原 850 行 api.ts 中的全部 interface / type alias 抽出
@@ -123,7 +123,7 @@ export interface ClusterSnapshot {
 export interface VmPlatform {
   id: string;
   name: string;
-  hypervisorType: 'vmware' | 'proxmox' | 'kvm';
+  hypervisorType: 'vmware' | 'proxmox' | 'kvm' | 'fusionsphere';
   host: string;
   port: number;
   status: 'active' | 'inactive' | 'error';
@@ -132,7 +132,7 @@ export interface VmPlatform {
 
 export interface VmPlatformInput {
   name: string;
-  hypervisorType: 'vmware' | 'proxmox' | 'kvm';
+  hypervisorType: 'vmware' | 'proxmox' | 'kvm' | 'fusionsphere';
   host: string;
   port: number;
   username: string;

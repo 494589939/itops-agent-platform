@@ -30,6 +30,9 @@ interface Container {
   name: string;
   image: string;
   status: string;
+  /** 机器可读状态（running/exited），后端 normalizeContainer 返回 */
+  state?: string;
+  State?: string;
   host?: string;
   container_id?: string;
 }
@@ -301,7 +304,7 @@ export default function ContainerMonitor() {
                 ghost
                 icon={<Play className="w-3 h-3" />}
                 onClick={() => toggleMonitor(record.id, true)}
-                disabled={record.status !== 'running'}
+                disabled={record.state !== 'running' && record.State !== 'running'}
               >
                 开始监控
               </Button>

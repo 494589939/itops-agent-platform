@@ -1,9 +1,9 @@
-export type ApiError = { response?: { data?: { message?: string } } };
+﻿export type ApiError = { response?: { data?: { message?: string } } };
 
 export interface Platform {
   id: string;
   name: string;
-  hypervisorType: 'vmware' | 'proxmox' | 'kvm';
+  hypervisorType: 'vmware' | 'proxmox' | 'kvm' | 'fusionsphere';
   host: string;
   port: number;
   status: 'active' | 'inactive' | 'error';
@@ -55,7 +55,7 @@ export interface AggregatedStats {
 
 export interface PlatformForm {
   name: string;
-  hypervisorType: 'vmware' | 'proxmox' | 'kvm';
+  hypervisorType: 'vmware' | 'proxmox' | 'kvm' | 'fusionsphere';
   host: string;
   port: number;
   username: string;

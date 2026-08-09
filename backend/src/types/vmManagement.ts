@@ -6,7 +6,7 @@
  */
 
 // 虚拟化平台类型
-export type HypervisorType = 'vmware' | 'kvm' | 'proxmox' | 'hyperv' | 'ovirt' | 'cloud';
+export type HypervisorType = 'vmware' | 'kvm' | 'proxmox' | 'fusionsphere' | 'hyperv' | 'ovirt' | 'cloud';
 
 // 虚拟机状态
 export type VMStatus = 'running' | 'stopped' | 'paused' | 'suspended' | 'unknown';

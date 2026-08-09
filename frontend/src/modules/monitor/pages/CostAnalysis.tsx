@@ -2,7 +2,7 @@
 import { message } from '@/lib/antdMessage';
 import { useState, useEffect, useCallback } from 'react';
 
-import { Card, Table, Tabs, Row, Col, Tag, Button, Spin, Empty, Statistic } from 'antd';
+import { Card, Table, Tabs, Row, Col, Tag, Button, Spin, Empty, Statistic, Modal, Descriptions } from 'antd';
 
 import { ReloadOutlined } from '@ant-design/icons';
 
@@ -133,6 +133,9 @@ export default function CostAnalysis() {
 
   useEffect(() => { refreshCurrentTab(); }, [activeTab]);
 
+  // 详情弹窗：{ type, item }
+  const [detail, setDetail] = useState<{ type: 'container' | 'vm' | 'recommendation'; item: any } | null>(null);
+
   // ==================== 表格列 ====================
   const containerColumns = [
     { title: '容器名', dataIndex: 'name', key: 'name', ellipsis: true },
@@ -148,7 +151,9 @@ export default function CostAnalysis() {
         <span className="font-medium text-blue-400">¥{(v || 0).toFixed(2)}</span>
       )},
     { title: '操作', key: 'actions', width: 80,
-      render: () => <Button size="small" type="link">详情</Button> },
+      render: (_: unknown, record: ContainerCost) => (
+        <Button size="small" type="link" onClick={() => setDetail({ type: 'container', item: record })}>详情</Button>
+      ) },
   ];
 
   const vmColumns = [
@@ -163,6 +168,10 @@ export default function CostAnalysis() {
       render: (v: number) => (
         <span className="font-medium text-blue-400">¥{(v || 0).toFixed(2)}</span>
       )},
+    { title: '操作', key: 'actions', width: 80,
+      render: (_: unknown, record: VMCost) => (
+        <Button size="small" type="link" onClick={() => setDetail({ type: 'vm', item: record })}>详情</Button>
+      ) },
   ];
 
   // ==================== 汇总行 ====================
@@ -333,7 +342,10 @@ export default function CostAnalysis() {
                               </div>
                               <p className="text-slate-400 text-xs mt-1">{rec.description}</p>
                               <div className="mt-2">
-                                <Button size="small" type="link" className="p-0 h-auto text-xs">查看详情</Button>
+                                <Button size="small" type="link" className="p-0 h-auto text-xs"
+                                  onClick={() => setDetail({ type: 'recommendation', item: rec })}>
+                                  查看详情
+                                </Button>
                               </div>
                             </div>
                           </div>
@@ -367,6 +379,59 @@ export default function CostAnalysis() {
           },
         ]} />
       </Card>
+
+      {/* 成本详情弹窗 */}
+      <Modal
+        title={detail?.type === 'recommendation' ? '优化建议详情' : detail?.type === 'vm' ? 'VM 成本详情' : '容器成本详情'}
+        open={!!detail}
+        onCancel={() => setDetail(null)}
+        footer={null}
+        width={520}
+      >
+        {detail?.type === 'container' && detail.item && (
+          <Descriptions column={1} bordered size="small">
+            <Descriptions.Item label="容器名">{detail.item.name}</Descriptions.Item>
+            <Descriptions.Item label="主机">{detail.item.host || '-'}</Descriptions.Item>
+            <Descriptions.Item label="CPU (核)">{detail.item.cpuCores?.toFixed(2)}</Descriptions.Item>
+            <Descriptions.Item label="内存 (MB)">{detail.item.memoryMB?.toFixed(0)}</Descriptions.Item>
+            <Descriptions.Item label="每小时费率">¥{detail.item.hourlyRate?.toFixed(4)}</Descriptions.Item>
+            <Descriptions.Item label="24h 估算">¥{detail.item.dailyEstimate?.toFixed(2)}</Descriptions.Item>
+            <Descriptions.Item label="30日估算">
+              <span className="font-medium text-blue-400">¥{detail.item.monthlyEstimate?.toFixed(2)}</span>
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+        {detail?.type === 'vm' && detail.item && (
+          <Descriptions column={1} bordered size="small">
+            <Descriptions.Item label="VM 名">{detail.item.name}</Descriptions.Item>
+            <Descriptions.Item label="平台">{detail.item.platform || '-'}</Descriptions.Item>
+            <Descriptions.Item label="CPU (核)">{detail.item.cpuCores?.toFixed(2)}</Descriptions.Item>
+            <Descriptions.Item label="内存 (GB)">{detail.item.memoryGB?.toFixed(1)}</Descriptions.Item>
+            <Descriptions.Item label="磁盘 (GB)">{detail.item.diskGB?.toFixed(0)}</Descriptions.Item>
+            <Descriptions.Item label="每小时费率">¥{detail.item.hourlyRate?.toFixed(4)}</Descriptions.Item>
+            <Descriptions.Item label="30日估算">
+              <span className="font-medium text-blue-400">¥{detail.item.monthlyEstimate?.toFixed(2)}</span>
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+        {detail?.type === 'recommendation' && detail.item && (
+          <div className="space-y-4">
+            <Descriptions column={1} bordered size="small">
+              <Descriptions.Item label="建议类型">
+                {detail.item.type === 'idle' ? '闲置资源' : detail.item.type === 'downsize' ? '降配' : '预留实例'}
+              </Descriptions.Item>
+              <Descriptions.Item label="对象">{detail.item.resource || '-'}</Descriptions.Item>
+              <Descriptions.Item label="预计月省">
+                <span className="font-medium text-green-400">¥{detail.item.monthlySavings?.toFixed(2)}</span>
+              </Descriptions.Item>
+            </Descriptions>
+            <div className="p-3 bg-background rounded-lg border border-border">
+              <p className="text-sm font-medium text-text-primary mb-1">{detail.item.title}</p>
+              <p className="text-sm text-text-secondary">{detail.item.description}</p>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -2,9 +2,9 @@
 import { message } from '@/lib/antdMessage';
 import { useState, useEffect, useMemo } from 'react';
 
-import { Table, Button, Modal, Form, Input, Tag, Popconfirm, Empty, Tooltip, Select } from 'antd';
+import { Table, Button, Modal, Form, Input, Tag, Popconfirm, Empty, Tooltip, Select, Descriptions, Spin } from 'antd';
 
-import { Search, RefreshCw, Trash2, Download, Cloud, HardDrive, Server, Layers } from 'lucide-react';
+import { Search, RefreshCw, Trash2, Download, Cloud, HardDrive, Server, Layers, Eye } from 'lucide-react';
 
 import api from '../../../lib/api';
 
@@ -127,6 +127,25 @@ export default function Images() {
     return { totalSize, dbCount, mwCount, total: data.length };
   }, [data]);
 
+  // ── 镜像详情 ──
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailData, setDetailData] = useState<any>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const showDetail = async (record: Image) => {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetailData(null);
+    try {
+      const { data } = await api.get(`/images/${record.id}`);
+      setDetailData(data);
+    } catch {
+      message.error('加载镜像详情失败');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   const columns = [
     {
       title: '名称',
@@ -178,12 +197,17 @@ export default function Images() {
     {
       title: '操作',
       key: 'action',
-      width: 90,
+      width: 150,
       align: 'center' as const,
       render: (_: unknown, record: Image) => (
-        <Popconfirm title="确定删除?" okText="删除" cancelText="取消" okButtonProps={{ danger: true }} onConfirm={() => handleDelete(record.id)}>
-          <Button type="link" size="small" danger icon={<Trash2 size={14} />}>删除</Button>
-        </Popconfirm>
+        <>
+          <Button type="link" size="small" icon={<Eye size={14} />} onClick={() => showDetail(record)}>
+            详情
+          </Button>
+          <Popconfirm title="确定删除?" okText="删除" cancelText="取消" okButtonProps={{ danger: true }} onConfirm={() => handleDelete(record.id)}>
+            <Button type="link" size="small" danger icon={<Trash2 size={14} />}>删除</Button>
+          </Popconfirm>
+        </>
       ),
     },
   ];
@@ -318,6 +342,46 @@ export default function Images() {
             <Input placeholder="留空则拉取到所有主机" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 镜像详情 */}
+      <Modal
+        title="镜像详情"
+        open={detailOpen}
+        onCancel={() => setDetailOpen(false)}
+        footer={null}
+        width={640}
+      >
+        {detailLoading ? (
+          <div className="py-16 flex justify-center"><Spin /></div>
+        ) : detailData ? (
+          <Descriptions column={1} bordered size="small">
+            <Descriptions.Item label="镜像 ID">
+              <span className="font-mono text-xs break-all">{detailData.id || detailData.Id || '-'}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="仓库">{detailData.repository || '-'}</Descriptions.Item>
+            <Descriptions.Item label="标签">{detailData.tag || '-'}</Descriptions.Item>
+            <Descriptions.Item label="大小">{formatSize(detailData.size ?? detailData.Size ?? 0)}</Descriptions.Item>
+            <Descriptions.Item label="虚拟大小(含共享层)">{formatSize(detailData.virtualSize ?? detailData.VirtualSize ?? 0)}</Descriptions.Item>
+            <Descriptions.Item label="创建时间">
+              {(detailData.created ?? detailData.Created)
+                ? new Date((detailData.created ?? detailData.Created) * 1000).toLocaleString('zh-CN')
+                : '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="全部标签">
+              {Array.isArray(detailData.tags ?? detailData.RepoTags)
+                ? (detailData.tags ?? detailData.RepoTags).join(', ')
+                : '-'}
+            </Descriptions.Item>
+            {detailData.labels && Object.keys(detailData.labels).length > 0 && (
+              <Descriptions.Item label="Labels">
+                <pre className="text-xs bg-background p-2 rounded overflow-auto max-h-40 font-mono">
+                  {JSON.stringify(detailData.labels, null, 2)}
+                </pre>
+              </Descriptions.Item>
+            )}
+          </Descriptions>
+        ) : null}
       </Modal>
     </div>
   );

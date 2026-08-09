@@ -106,6 +106,7 @@ export function PlatformManagementModal({
                 <option value="proxmox">Proxmox</option>
                 <option value="vmware">VMware ESXi / vSphere</option>
                 <option value="kvm">KVM</option>
+                <option value="fusionsphere">华为 FusionSphere</option>
               </select>
             </div>
             <div>
